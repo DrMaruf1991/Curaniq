@@ -1,0 +1,306 @@
+{
+  "_metadata": {
+    "source": "Published clinical guidelines (BTS, ESC, JBDS-IP, NICE, AHA)",
+    "version": "2024",
+    "note": "Each pathway step has: action, responsible, timeframe, source. Steps are sequential.",
+    "total_entries": 6
+  },
+  "pathways": {
+    "community_acquired_pneumonia": {
+      "source": "BTS/NICE CAP Guidelines 2023; NICE NG191",
+      "steps": [
+        {
+          "step": 1,
+          "action": "Assess severity: CURB-65 score",
+          "responsible": "doctor",
+          "timeframe": "On admission",
+          "source": "BTS 2023; NICE NG191"
+        },
+        {
+          "step": 2,
+          "action": "Blood cultures x2 BEFORE antibiotics (if CURB-65 >= 2)",
+          "responsible": "nurse",
+          "timeframe": "Within 1 hour",
+          "source": "Sepsis-3; BTS 2023"
+        },
+        {
+          "step": 3,
+          "action": "CRP + FBC + U&E + LFTs + lactate",
+          "responsible": "lab",
+          "timeframe": "Within 1 hour",
+          "source": "BTS 2023"
+        },
+        {
+          "step": 4,
+          "action": "Chest X-ray",
+          "responsible": "radiology",
+          "timeframe": "Within 4 hours",
+          "source": "BTS 2023"
+        },
+        {
+          "step": 5,
+          "action": "Start empiric antibiotics per CURB-65: 0-1=amoxicillin 500mg TID; 2+=co-amoxiclav+clarithromycin",
+          "responsible": "doctor",
+          "timeframe": "Within 4h (1h if sepsis)",
+          "source": "BTS 2023; NICE NG191"
+        },
+        {
+          "step": 6,
+          "action": "Review at 48-72h: clinical response, cultures, de-escalation opportunity",
+          "responsible": "doctor",
+          "timeframe": "48-72 hours",
+          "source": "BTS 2023"
+        },
+        {
+          "step": 7,
+          "action": "Total duration: 5 days (uncomplicated CAP)",
+          "responsible": "doctor",
+          "timeframe": "Day 5",
+          "source": "BTS 2023; NICE NG191"
+        }
+      ]
+    },
+    "acute_coronary_syndrome": {
+      "source": "ESC 2023 ACS Guidelines; NICE NG185",
+      "steps": [
+        {
+          "step": 1,
+          "action": "12-lead ECG within 10 minutes",
+          "responsible": "nurse/doctor",
+          "timeframe": "10 minutes",
+          "source": "ESC 2023; NICE NG185"
+        },
+        {
+          "step": 2,
+          "action": "hs-Troponin at 0h and 1h (or 3h if non-hs)",
+          "responsible": "lab",
+          "timeframe": "0h + 1h",
+          "source": "ESC 2023"
+        },
+        {
+          "step": 3,
+          "action": "HEART score calculation",
+          "responsible": "doctor",
+          "timeframe": "With first troponin",
+          "source": "Six et al. 2008"
+        },
+        {
+          "step": 4,
+          "action": "Aspirin 300mg loading + P2Y12 inhibitor (ticagrelor 180mg or clopidogrel 300mg)",
+          "responsible": "doctor",
+          "timeframe": "Immediately if ACS confirmed",
+          "source": "ESC 2023; NICE NG185"
+        },
+        {
+          "step": 5,
+          "action": "Anticoagulation: fondaparinux 2.5mg SC (NSTEMI) or UFH (STEMI)",
+          "responsible": "doctor",
+          "timeframe": "With DAPT",
+          "source": "ESC 2023"
+        },
+        {
+          "step": 6,
+          "action": "Angiography: within 24h (high-risk NSTEMI) or immediate (STEMI)",
+          "responsible": "cardiology",
+          "timeframe": "24h or immediate",
+          "source": "ESC 2023; NICE NG185"
+        }
+      ]
+    },
+    "diabetic_ketoacidosis": {
+      "source": "JBDS-IP DKA Guidelines 2023",
+      "steps": [
+        {
+          "step": 1,
+          "action": "Confirm DKA: glucose >11, pH <7.3 or bicarb <15, ketonemia >=3.0",
+          "responsible": "doctor",
+          "timeframe": "Immediate",
+          "source": "JBDS-IP 2023"
+        },
+        {
+          "step": 2,
+          "action": "IV 0.9% NaCl 1L over 1st hour",
+          "responsible": "nurse",
+          "timeframe": "Hour 0-1",
+          "source": "JBDS-IP 2023"
+        },
+        {
+          "step": 3,
+          "action": "Fixed-rate insulin infusion 0.1 units/kg/hour",
+          "responsible": "doctor",
+          "timeframe": "After first bolus",
+          "source": "JBDS-IP 2023"
+        },
+        {
+          "step": 4,
+          "action": "K+ replacement: add 40mmol KCl/L if K+ 3.5-5.5",
+          "responsible": "doctor",
+          "timeframe": "With 2nd bag",
+          "source": "JBDS-IP 2023"
+        },
+        {
+          "step": 5,
+          "action": "Hourly glucose + ketone monitoring. VBG at 2h, 4h, 6h",
+          "responsible": "nurse",
+          "timeframe": "Ongoing",
+          "source": "JBDS-IP 2023"
+        },
+        {
+          "step": 6,
+          "action": "Add 10% dextrose when glucose <14 (continue insulin)",
+          "responsible": "doctor",
+          "timeframe": "Glucose <14",
+          "source": "JBDS-IP 2023"
+        }
+      ]
+    },
+    "sepsis_management": {
+      "source": "Surviving Sepsis Campaign 2021; NICE NG51",
+      "steps": [
+        {
+          "step": 1,
+          "action": "Screen: qSOFA >=2 or NEWS2 >=5 with suspected infection",
+          "responsible": "nurse/doctor",
+          "timeframe": "On recognition",
+          "source": "SSC 2021; Sepsis-3"
+        },
+        {
+          "step": 2,
+          "action": "Measure serum lactate. If >2 mmol/L: repeat within 2-4h",
+          "responsible": "lab",
+          "timeframe": "Immediate",
+          "source": "SSC 2021"
+        },
+        {
+          "step": 3,
+          "action": "Blood cultures x2 (aerobic + anaerobic) BEFORE antibiotics",
+          "responsible": "nurse",
+          "timeframe": "Before abx",
+          "source": "SSC 2021"
+        },
+        {
+          "step": 4,
+          "action": "Broad-spectrum IV antibiotics within 1 hour of recognition",
+          "responsible": "doctor",
+          "timeframe": "Within 1 hour",
+          "source": "SSC 2021; NICE NG51"
+        },
+        {
+          "step": 5,
+          "action": "IV crystalloid 30 mL/kg for hypotension or lactate >=4",
+          "responsible": "nurse/doctor",
+          "timeframe": "Within 3 hours",
+          "source": "SSC 2021"
+        },
+        {
+          "step": 6,
+          "action": "Vasopressors (norepinephrine first-line) if MAP <65 after fluids",
+          "responsible": "doctor/ICU",
+          "timeframe": "After initial resuscitation",
+          "source": "SSC 2021"
+        },
+        {
+          "step": 7,
+          "action": "De-escalate antibiotics based on culture results (48-72h review)",
+          "responsible": "doctor",
+          "timeframe": "48-72h",
+          "source": "SSC 2021"
+        }
+      ]
+    },
+    "acute_heart_failure": {
+      "source": "ESC 2021 HF Guidelines; NICE NG106",
+      "steps": [
+        {
+          "step": 1,
+          "action": "Assess: BNP/NT-proBNP + 12-lead ECG + CXR + echo (if not recent)",
+          "responsible": "doctor",
+          "timeframe": "Within 4 hours",
+          "source": "ESC 2021; NICE NG106"
+        },
+        {
+          "step": 2,
+          "action": "IV furosemide 40-80mg (or 1-2x home dose if already on diuretic)",
+          "responsible": "doctor",
+          "timeframe": "Immediate",
+          "source": "ESC 2021"
+        },
+        {
+          "step": 3,
+          "action": "Oxygen if SpO2 <90%. CPAP/NIV if respiratory distress",
+          "responsible": "nurse/doctor",
+          "timeframe": "Immediate",
+          "source": "ESC 2021"
+        },
+        {
+          "step": 4,
+          "action": "Daily weight + strict fluid balance",
+          "responsible": "nurse",
+          "timeframe": "Ongoing",
+          "source": "NICE NG106"
+        },
+        {
+          "step": 5,
+          "action": "Review and optimize: ACEi/ARB + beta-blocker + MRA when stabilized",
+          "responsible": "doctor",
+          "timeframe": "Before discharge",
+          "source": "ESC 2021; NICE NG106"
+        },
+        {
+          "step": 6,
+          "action": "Consider SGLT2 inhibitor (dapagliflozin/empagliflozin) regardless of diabetes status",
+          "responsible": "doctor",
+          "timeframe": "Before discharge",
+          "source": "DAPA-HF; EMPEROR-Reduced; ESC 2021"
+        }
+      ]
+    },
+    "venous_thromboembolism": {
+      "source": "NICE NG158; CHEST 2021; ESC 2019 PE",
+      "steps": [
+        {
+          "step": 1,
+          "action": "Assess pre-test probability: Wells DVT or Wells PE score",
+          "responsible": "doctor",
+          "timeframe": "Immediate",
+          "source": "NICE NG158"
+        },
+        {
+          "step": 2,
+          "action": "D-dimer (age-adjusted cutoff if >50y: age x 10 ng/mL)",
+          "responsible": "lab",
+          "timeframe": "Immediate",
+          "source": "NICE NG158; Righini et al. JAMA 2014"
+        },
+        {
+          "step": 3,
+          "action": "Imaging: compression USS (DVT) or CTPA (PE)",
+          "responsible": "radiology",
+          "timeframe": "Same day",
+          "source": "NICE NG158"
+        },
+        {
+          "step": 4,
+          "action": "Anticoagulation: DOAC first-line (rivaroxaban or apixaban)",
+          "responsible": "doctor",
+          "timeframe": "On diagnosis",
+          "source": "NICE NG158; CHEST 2021"
+        },
+        {
+          "step": 5,
+          "action": "Duration: provoked = 3 months; unprovoked = 6 months then reassess",
+          "responsible": "doctor",
+          "timeframe": "3-6 months",
+          "source": "NICE NG158; CHEST 2021"
+        },
+        {
+          "step": 6,
+          "action": "If massive PE with hemodynamic instability: systemic thrombolysis (alteplase)",
+          "responsible": "doctor/ICU",
+          "timeframe": "Immediate",
+          "source": "ESC 2019 PE"
+        }
+      ]
+    }
+  }
+}

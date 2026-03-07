@@ -1,0 +1,221 @@
+{
+  "_metadata": {
+    "source": "Clinical decision support trigger rules",
+    "version": "2024",
+    "total_entries": 12
+  },
+  "triggers": [
+    {
+      "conditions": [
+        "ckd",
+        "chronic kidney",
+        "renal impairment",
+        "renal failure"
+      ],
+      "labs": {
+        "egfr": {
+          "below": 60
+        }
+      },
+      "topics": [
+        "renal dosing",
+        "nephrotoxic drugs",
+        "KDIGO"
+      ],
+      "priority": "high"
+    },
+    {
+      "conditions": [
+        "atrial fibrillation",
+        "af",
+        "afib"
+      ],
+      "medications": [
+        "warfarin",
+        "rivaroxaban",
+        "apixaban",
+        "dabigatran",
+        "edoxaban"
+      ],
+      "topics": [
+        "anticoagulation",
+        "stroke prevention",
+        "CHA2DS2-VASc"
+      ],
+      "priority": "high"
+    },
+    {
+      "conditions": [
+        "heart failure",
+        "chf",
+        "hfref",
+        "hfpef"
+      ],
+      "labs": {
+        "bnp": {
+          "above": 100
+        }
+      },
+      "topics": [
+        "heart failure management",
+        "SGLT2 inhibitors",
+        "NICE NG106"
+      ],
+      "priority": "high"
+    },
+    {
+      "conditions": [
+        "diabetes",
+        "type 2 diabetes",
+        "t2dm"
+      ],
+      "labs": {
+        "hba1c": {
+          "above": 53
+        }
+      },
+      "topics": [
+        "glycemic control",
+        "ADA 2024",
+        "KDIGO DM"
+      ],
+      "priority": "moderate"
+    },
+    {
+      "conditions": [
+        "pneumonia",
+        "cap",
+        "community acquired pneumonia"
+      ],
+      "topics": [
+        "CURB-65",
+        "antibiotic choice",
+        "BTS guidelines"
+      ],
+      "priority": "high"
+    },
+    {
+      "conditions": [
+        "sepsis",
+        "severe sepsis",
+        "septic shock"
+      ],
+      "labs": {
+        "lactate": {
+          "above": 2
+        }
+      },
+      "topics": [
+        "Surviving Sepsis Campaign",
+        "qSOFA",
+        "fluid resuscitation"
+      ],
+      "priority": "critical"
+    },
+    {
+      "conditions": [
+        "dvt",
+        "pulmonary embolism",
+        "pe",
+        "vte"
+      ],
+      "topics": [
+        "Wells score",
+        "anticoagulation",
+        "DOAC dosing",
+        "NICE NG158"
+      ],
+      "priority": "high"
+    },
+    {
+      "conditions": [
+        "acute coronary syndrome",
+        "acs",
+        "stemi",
+        "nstemi",
+        "mi"
+      ],
+      "topics": [
+        "HEART score",
+        "dual antiplatelet",
+        "troponin",
+        "ESC ACS 2023"
+      ],
+      "priority": "critical"
+    },
+    {
+      "conditions": [
+        "copd",
+        "chronic obstructive"
+      ],
+      "medications": [
+        "salbutamol",
+        "ipratropium",
+        "tiotropium"
+      ],
+      "topics": [
+        "GOLD 2024",
+        "inhaler technique",
+        "exacerbation management"
+      ],
+      "priority": "moderate"
+    },
+    {
+      "conditions": [
+        "asthma"
+      ],
+      "medications": [
+        "salbutamol",
+        "beclometasone",
+        "budesonide",
+        "fluticasone"
+      ],
+      "topics": [
+        "BTS/SIGN 2024",
+        "GINA 2024",
+        "step-up/step-down"
+      ],
+      "priority": "moderate"
+    },
+    {
+      "conditions": [
+        "epilepsy",
+        "seizure"
+      ],
+      "medications": [
+        "carbamazepine",
+        "phenytoin",
+        "valproic acid",
+        "levetiracetam",
+        "lamotrigine"
+      ],
+      "topics": [
+        "NICE NG217",
+        "TDM monitoring",
+        "teratogenicity"
+      ],
+      "priority": "high"
+    },
+    {
+      "conditions": [
+        "cirrhosis",
+        "liver failure",
+        "hepatic encephalopathy"
+      ],
+      "labs": {
+        "alt": {
+          "above": 120
+        },
+        "bilirubin_total": {
+          "above": 42
+        }
+      },
+      "topics": [
+        "hepatic dose adjustment",
+        "Child-Pugh scoring",
+        "hepatotoxic drugs"
+      ],
+      "priority": "high"
+    }
+  ]
+}

@@ -1,0 +1,329 @@
+{
+  "_metadata": {
+    "source": "Published validated clinical scoring systems",
+    "version": "2024",
+    "note": "Each score has: components, weights, thresholds, interpretation, source citation",
+    "total_entries": 6
+  },
+  "scores": {
+    "CHA2DS2-VASc": {
+      "full_name": "CHA2DS2-VASc Score for Atrial Fibrillation Stroke Risk",
+      "components": [
+        {
+          "name": "congestive_heart_failure",
+          "points": 1,
+          "description": "CHF or LVEF <=40%"
+        },
+        {
+          "name": "hypertension",
+          "points": 1,
+          "description": "BP >140/90 or on antihypertensive"
+        },
+        {
+          "name": "age_75_plus",
+          "points": 2,
+          "description": "Age >= 75 years"
+        },
+        {
+          "name": "diabetes",
+          "points": 1,
+          "description": "Fasting glucose >125 or on treatment"
+        },
+        {
+          "name": "stroke_tia_history",
+          "points": 2,
+          "description": "Prior stroke, TIA, or thromboembolism"
+        },
+        {
+          "name": "vascular_disease",
+          "points": 1,
+          "description": "Prior MI, PAD, or aortic plaque"
+        },
+        {
+          "name": "age_65_74",
+          "points": 1,
+          "description": "Age 65-74 years"
+        },
+        {
+          "name": "female_sex",
+          "points": 1,
+          "description": "Female sex category"
+        }
+      ],
+      "max_score": 9,
+      "interpretation": {
+        "0": {
+          "risk": "low",
+          "annual_stroke_rate": "0.2%",
+          "recommendation": "No anticoagulation (males). Consider anticoagulation (females with score 1)."
+        },
+        "1": {
+          "risk": "low-moderate",
+          "annual_stroke_rate": "0.6%",
+          "recommendation": "Consider oral anticoagulation. Weigh against bleeding risk (HAS-BLED)."
+        },
+        "2": {
+          "risk": "moderate",
+          "annual_stroke_rate": "2.2%",
+          "recommendation": "Oral anticoagulation recommended (DOAC preferred over warfarin)."
+        },
+        "3+": {
+          "risk": "high",
+          "annual_stroke_rate": "3.2-15.2%",
+          "recommendation": "Oral anticoagulation strongly recommended."
+        }
+      },
+      "source": "Lip et al. Chest 2010;137(2):263-272; ESC AF Guidelines 2024"
+    },
+    "qSOFA": {
+      "full_name": "Quick Sequential Organ Failure Assessment",
+      "components": [
+        {
+          "name": "respiratory_rate_22_plus",
+          "points": 1,
+          "description": "Respiratory rate >= 22/min"
+        },
+        {
+          "name": "altered_mentation",
+          "points": 1,
+          "description": "GCS < 15"
+        },
+        {
+          "name": "systolic_bp_100_or_less",
+          "points": 1,
+          "description": "Systolic BP <= 100 mmHg"
+        }
+      ],
+      "max_score": 3,
+      "interpretation": {
+        "0-1": {
+          "risk": "low",
+          "recommendation": "Continue monitoring. Reassess if clinical deterioration."
+        },
+        "2-3": {
+          "risk": "high",
+          "recommendation": "HIGH risk of poor outcome. Assess for organ dysfunction (full SOFA). Consider ICU admission. Sepsis workup if infection suspected."
+        }
+      },
+      "source": "Singer et al. JAMA 2016;315(8):801-810 (Sepsis-3)"
+    },
+    "CURB-65": {
+      "full_name": "CURB-65 Pneumonia Severity Score",
+      "components": [
+        {
+          "name": "confusion",
+          "points": 1,
+          "description": "New-onset confusion (AMT <=8 or new disorientation)"
+        },
+        {
+          "name": "urea_above_7",
+          "points": 1,
+          "description": "Blood urea > 7 mmol/L (BUN > 19.6 mg/dL)"
+        },
+        {
+          "name": "respiratory_rate_30_plus",
+          "points": 1,
+          "description": "Respiratory rate >= 30/min"
+        },
+        {
+          "name": "low_blood_pressure",
+          "points": 1,
+          "description": "SBP < 90 or DBP <= 60 mmHg"
+        },
+        {
+          "name": "age_65_plus",
+          "points": 1,
+          "description": "Age >= 65 years"
+        }
+      ],
+      "max_score": 5,
+      "interpretation": {
+        "0-1": {
+          "risk": "low",
+          "mortality": "1.5%",
+          "recommendation": "Outpatient treatment. Oral antibiotics."
+        },
+        "2": {
+          "risk": "moderate",
+          "mortality": "9.2%",
+          "recommendation": "Consider hospital admission. Short inpatient stay or hospital-supervised outpatient."
+        },
+        "3-5": {
+          "risk": "high",
+          "mortality": "22%",
+          "recommendation": "Hospital admission. Score >=4: consider ICU admission."
+        }
+      },
+      "source": "Lim et al. Thorax 2003;58(5):377-382; BTS/NICE"
+    },
+    "MEWS": {
+      "full_name": "Modified Early Warning Score",
+      "components": [
+        {
+          "name": "systolic_bp",
+          "ranges": "<=70:3, 71-80:2, 81-100:1, 101-199:0, >=200:2",
+          "description": "Systolic blood pressure"
+        },
+        {
+          "name": "heart_rate",
+          "ranges": "<=40:2, 41-50:1, 51-100:0, 101-110:1, 111-129:2, >=130:3",
+          "description": "Heart rate"
+        },
+        {
+          "name": "respiratory_rate",
+          "ranges": "<9:2, 9-14:0, 15-20:1, 21-29:2, >=30:3",
+          "description": "Respiratory rate"
+        },
+        {
+          "name": "temperature",
+          "ranges": "<35:2, 35-38.4:0, >=38.5:2",
+          "description": "Temperature (Celsius)"
+        },
+        {
+          "name": "consciousness",
+          "ranges": "alert:0, voice:1, pain:2, unresponsive:3",
+          "description": "AVPU scale"
+        }
+      ],
+      "max_score": 14,
+      "interpretation": {
+        "0-2": {
+          "risk": "low",
+          "recommendation": "Continue routine observations."
+        },
+        "3-4": {
+          "risk": "moderate",
+          "recommendation": "Increase observation frequency. Notify nurse-in-charge."
+        },
+        "5+": {
+          "risk": "high",
+          "recommendation": "URGENT medical review. Consider critical care outreach."
+        }
+      },
+      "source": "Subbe et al. QJM 2001;94(10):521-526; NICE CG50"
+    },
+    "Wells_DVT": {
+      "full_name": "Wells Score for Deep Vein Thrombosis",
+      "components": [
+        {
+          "name": "active_cancer",
+          "points": 1,
+          "description": "Active cancer (treatment within 6mo or palliative)"
+        },
+        {
+          "name": "paralysis_immobilization",
+          "points": 1,
+          "description": "Paralysis, paresis, or recent cast immobilization of lower extremity"
+        },
+        {
+          "name": "bedridden_3_days",
+          "points": 1,
+          "description": "Bedridden >3 days or major surgery within 12 weeks"
+        },
+        {
+          "name": "tenderness_along_veins",
+          "points": 1,
+          "description": "Localized tenderness along deep venous system"
+        },
+        {
+          "name": "entire_leg_swollen",
+          "points": 1,
+          "description": "Entire leg swollen"
+        },
+        {
+          "name": "calf_swelling_3cm",
+          "points": 1,
+          "description": "Calf swelling >3cm compared to asymptomatic leg"
+        },
+        {
+          "name": "pitting_edema",
+          "points": 1,
+          "description": "Pitting edema confined to symptomatic leg"
+        },
+        {
+          "name": "collateral_veins",
+          "points": 1,
+          "description": "Collateral superficial veins (non-varicose)"
+        },
+        {
+          "name": "previous_dvt",
+          "points": 1,
+          "description": "Previously documented DVT"
+        },
+        {
+          "name": "alternative_diagnosis",
+          "points": -2,
+          "description": "Alternative diagnosis at least as likely as DVT"
+        }
+      ],
+      "max_score": 9,
+      "interpretation": {
+        "0-1": {
+          "risk": "low",
+          "probability": "5%",
+          "recommendation": "D-dimer testing. If negative: DVT excluded. If positive: imaging."
+        },
+        "2": {
+          "risk": "moderate",
+          "probability": "17%",
+          "recommendation": "D-dimer testing. If negative: DVT unlikely. If positive: compression ultrasound."
+        },
+        "3+": {
+          "risk": "high",
+          "probability": "53%",
+          "recommendation": "Compression ultrasound. Consider empiric anticoagulation while awaiting imaging."
+        }
+      },
+      "source": "Wells et al. Lancet 1997;350(9094):1795-1798; NICE NG158"
+    },
+    "HEART": {
+      "full_name": "HEART Score for Chest Pain Risk Stratification",
+      "components": [
+        {
+          "name": "history",
+          "ranges": "slightly_suspicious:0, moderately_suspicious:1, highly_suspicious:2",
+          "description": "Clinical history"
+        },
+        {
+          "name": "ecg",
+          "ranges": "normal:0, non_specific:1, significant_deviation:2",
+          "description": "ECG findings"
+        },
+        {
+          "name": "age",
+          "ranges": "<45:0, 45-64:1, >=65:2",
+          "description": "Patient age"
+        },
+        {
+          "name": "risk_factors",
+          "ranges": "0-1:0, 2:1, >=3_or_atherosclerosis:2",
+          "description": "CV risk factors (HTN, DM, smoking, hyperlipidemia, obesity, family Hx)"
+        },
+        {
+          "name": "troponin",
+          "ranges": "normal:0, 1-3x_ULN:1, >3x_ULN:2",
+          "description": "Initial troponin"
+        }
+      ],
+      "max_score": 10,
+      "interpretation": {
+        "0-3": {
+          "risk": "low",
+          "mace_6wk": "1.7%",
+          "recommendation": "Consider early discharge. Outpatient follow-up."
+        },
+        "4-6": {
+          "risk": "moderate",
+          "mace_6wk": "16.6%",
+          "recommendation": "Observation and further workup. Serial troponin. Cardiology consultation."
+        },
+        "7-10": {
+          "risk": "high",
+          "mace_6wk": "50.1%",
+          "recommendation": "URGENT intervention. Admit to monitored bed. Early invasive strategy."
+        }
+      },
+      "source": "Six et al. Neth Heart J 2008;16(6):191-196; Backus et al. Int J Cardiol 2013;168(3):2153-2158"
+    }
+  }
+}

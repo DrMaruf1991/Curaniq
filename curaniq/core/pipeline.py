@@ -203,6 +203,20 @@ from curaniq.layers.L4_ai_model.cross_encoder import CrossEncoderReranker
 # ── NEW: L8-8 Medication Coverage Scope Fence ──
 from curaniq.layers.L8_interface.coverage_scope import MedicationCoverageScopeFence
 
+# ── P2 CLUSTER 3: L7 EHR & Clinical Workflows (8 modules) ──
+from curaniq.layers.L7_ehr_integration.clinical_scoring_labs import (
+    LabResultInterpreter,          # L7-11
+    ClinicalScoringEngine,         # L7-14
+    AlertFatigueManager,           # L7-10
+    OrderSetCopilot,               # L7-7
+)
+from curaniq.layers.L7_ehr_integration.clinical_workflows import (
+    ContextAwareEvidenceDelivery,   # L7-4
+    InstitutionPolicyEnforcer,     # L7-6
+    MedicationReconciliationEngine, # L7-8
+    ClinicalPathwayGenerator,      # L7-9
+)
+
 # ── P2 CLUSTER 1: L3 Clinical Specialty Engines (12 modules) ──
 from curaniq.layers.L3_safety_kernel.geriatric_renal_anticoag_tdm import (
     GeriatricSafetyEngine,         # L3-8
@@ -584,6 +598,16 @@ class CURANIQPipeline:
         self.applicability_engine = ApplicabilityEngine()         # L2-11
         self.journal_integrity = JournalIntegrityScorer()         # L2-12
         self.trial_integrity = TrialIntegrityDetector()           # L2-14
+
+        # ── P2 CLUSTER 3: L7 EHR & Clinical Workflows ──
+        self.lab_interpreter = LabResultInterpreter()              # L7-11
+        self.clinical_scoring = ClinicalScoringEngine()            # L7-14
+        self.alert_fatigue = AlertFatigueManager()                 # L7-10
+        self.order_copilot = OrderSetCopilot()                     # L7-7
+        self.context_evidence = ContextAwareEvidenceDelivery()     # L7-4
+        self.policy_enforcer = InstitutionPolicyEnforcer()         # L7-6
+        self.med_reconciliation = MedicationReconciliationEngine() # L7-8
+        self.pathway_generator = ClinicalPathwayGenerator()        # L7-9
 
     def process(self, query: ClinicalQuery) -> CURANIQResponse:
         """
@@ -989,6 +1013,35 @@ class CURANIQPipeline:
                 specialty_alerts.append(
                     f"WHO_EML: {drug} is NOT on the WHO Essential Medicines List 2023"
                 )
+
+        # L7-4: Context-Aware Evidence Delivery
+        # Proactively surface relevant evidence based on patient context
+        if patient_conditions or drugs_mentioned:
+            patient_labs = {}
+            if patient_egfr:
+                patient_labs["egfr"] = patient_egfr
+            context_matches = self.context_evidence.match_context(
+                patient_conditions=patient_conditions,
+                patient_medications=drugs_mentioned,
+                patient_labs=patient_labs,
+                patient_age=patient_age,
+            )
+            for match in context_matches[:3]:
+                specialty_alerts.append(
+                    f"PROACTIVE [{match['priority']}]: Relevant evidence topics: "
+                    f"{', '.join(match['topics'][:3])} "
+                    f"(patient factors: {', '.join(match['patient_factors'][:2])})"
+                )
+
+        # L7-6: Institution Policy Check on all drugs
+        for drug in drugs_mentioned:
+            policy = self.policy_enforcer.check_policy(drug, indication=english_text)
+            if not policy.compliant:
+                for violation in policy.violations:
+                    specialty_alerts.append(
+                        f"POLICY [{violation['type']}]: {drug} — {violation['reason'][:80]}. "
+                        f"Approval needed from: {policy.approval_authority}"
+                    )
 
         # Inject specialty alerts into CQL results for downstream use
         cql_results["specialty_alerts"] = specialty_alerts

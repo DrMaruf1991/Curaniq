@@ -1,0 +1,155 @@
+{
+  "_metadata": {
+    "source": "Clinical pharmacology literature and FDA prescribing information",
+    "version": "2024",
+    "total_entries": 10
+  },
+  "interactions": {
+    "potassium_high": {
+      "drugs": [
+        "spironolactone",
+        "amiloride",
+        "triamterene",
+        "enalapril",
+        "lisinopril",
+        "ramipril",
+        "perindopril",
+        "losartan",
+        "valsartan",
+        "candesartan",
+        "irbesartan",
+        "telmisartan",
+        "trimethoprim",
+        "tacrolimus",
+        "cyclosporine"
+      ],
+      "comment": "Drug-induced hyperkalemia risk. Monitor K+ closely. Consider alternative or dose reduction.",
+      "source": "NICE NG136; KDIGO 2024"
+    },
+    "potassium_low": {
+      "drugs": [
+        "furosemide",
+        "bumetanide",
+        "hydrochlorothiazide",
+        "chlorthalidone",
+        "indapamide",
+        "bendroflumethiazide",
+        "amphotericin_b",
+        "salbutamol",
+        "insulin"
+      ],
+      "comment": "Drug-induced hypokalemia. Monitor K+. Consider K+ supplementation or K+-sparing agent.",
+      "source": "BNF; NICE NG136"
+    },
+    "inr_high": {
+      "drugs": [
+        "warfarin"
+      ],
+      "comment": "Patient on warfarin. Consider dose reduction or withholding. Check for interacting drugs.",
+      "source": "BCSH Warfarin Guidelines; NICE NG196"
+    },
+    "inr_high_interactions": {
+      "drugs": [
+        "amiodarone",
+        "fluconazole",
+        "metronidazole",
+        "erythromycin",
+        "clarithromycin",
+        "ciprofloxacin",
+        "omeprazole",
+        "cimetidine"
+      ],
+      "comment": "These drugs increase warfarin effect (CYP2C9/3A4 inhibition). INR monitoring required if co-prescribed with warfarin.",
+      "source": "Holbrook et al. Chest 2012 (Systematic review of warfarin interactions)"
+    },
+    "creatinine_rising": {
+      "drugs": [
+        "vancomycin",
+        "gentamicin",
+        "amphotericin_b",
+        "methotrexate",
+        "cisplatin",
+        "ibuprofen",
+        "naproxen",
+        "diclofenac",
+        "enalapril",
+        "lisinopril",
+        "losartan",
+        "valsartan"
+      ],
+      "comment": "Rising creatinine in context of nephrotoxic drug. Assess for drug-induced AKI. Consider dose adjustment or alternative.",
+      "source": "KDIGO AKI 2012; Renal Drug Handbook"
+    },
+    "liver_enzymes_elevated": {
+      "drugs": [
+        "methotrexate",
+        "azathioprine",
+        "isoniazid",
+        "rifampicin",
+        "valproic_acid",
+        "carbamazepine",
+        "phenytoin",
+        "atorvastatin",
+        "amiodarone",
+        "paracetamol"
+      ],
+      "comment": "Elevated transaminases may be drug-induced hepatotoxicity. Check timeline against drug initiation. Consider discontinuation if ALT >3x ULN with symptoms or >5x ULN asymptomatic.",
+      "source": "ACG Drug-Induced Liver Injury 2014; Chalasani et al. Am J Gastroenterol"
+    },
+    "glucose_low": {
+      "drugs": [
+        "insulin",
+        "glibenclamide",
+        "glimepiride",
+        "gliclazide",
+        "glipizide",
+        "repaglinide"
+      ],
+      "comment": "Hypoglycemia from insulin or sulfonylurea. Review dose. Elderly and renal impairment increase risk.",
+      "source": "ADA 2024; NICE NG28"
+    },
+    "thyroid_abnormal": {
+      "drugs": [
+        "amiodarone",
+        "lithium",
+        "interferon",
+        "ipilimumab",
+        "nivolumab",
+        "pembrolizumab",
+        "levothyroxine"
+      ],
+      "comment": "Thyroid dysfunction may be drug-induced. Amiodarone: both hyper and hypothyroidism. Lithium: hypothyroidism. Checkpoint inhibitors: immune thyroiditis.",
+      "source": "ETA Amiodarone Thyroid 2018; NICE CG185 (lithium)"
+    },
+    "platelet_low": {
+      "drugs": [
+        "heparin",
+        "enoxaparin",
+        "valproic_acid",
+        "carbamazepine",
+        "linezolid",
+        "methotrexate",
+        "trimethoprim",
+        "rifampicin"
+      ],
+      "comment": "Thrombocytopenia may be drug-induced. Check heparin (HIT risk), cytotoxic agents, antibiotics. Consider urgent haematology review if <50.",
+      "source": "ASH HIT Guidelines 2018; BNF"
+    },
+    "magnesium_low": {
+      "drugs": [
+        "omeprazole",
+        "pantoprazole",
+        "esomeprazole",
+        "lansoprazole",
+        "furosemide",
+        "hydrochlorothiazide",
+        "cisplatin",
+        "amphotericin_b",
+        "tacrolimus",
+        "cyclosporine"
+      ],
+      "comment": "Drug-induced hypomagnesemia. PPI-associated (>3 months use). Diuretic-associated. Monitor and replace.",
+      "source": "FDA Safety Communication 2011 (PPIs); Hess et al. Eur J Intern Med 2022"
+    }
+  }
+}

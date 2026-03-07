@@ -1,0 +1,207 @@
+{
+  "_metadata": {
+    "source": "Published clinical guidelines and drug safety literature",
+    "version": "2024",
+    "total_entries": 12
+  },
+  "rules": [
+    {
+      "trigger_class": "nsaid",
+      "trigger_drugs": [
+        "ibuprofen",
+        "naproxen",
+        "diclofenac",
+        "indomethacin",
+        "ketorolac",
+        "meloxicam",
+        "celecoxib",
+        "piroxicam",
+        "mefenamic_acid"
+      ],
+      "condition": "age >= 65 OR peptic_ulcer OR anticoagulant OR corticosteroid",
+      "required": "PPI (omeprazole, pantoprazole, esomeprazole, lansoprazole)",
+      "check_drugs": [
+        "omeprazole",
+        "pantoprazole",
+        "esomeprazole",
+        "lansoprazole",
+        "rabeprazole"
+      ],
+      "rationale": "GI bleeding prevention in high-risk patients",
+      "source": "NICE NG183; ACG Peptic Ulcer 2022; ACCF/ACG/AHA 2008"
+    },
+    {
+      "trigger_class": "opioid",
+      "trigger_drugs": [
+        "morphine",
+        "oxycodone",
+        "codeine",
+        "tramadol",
+        "fentanyl",
+        "hydromorphone",
+        "tapentadol",
+        "buprenorphine"
+      ],
+      "condition": "duration > 3 days",
+      "required": "Laxative (senna, docusate, macrogol, lactulose)",
+      "check_drugs": [
+        "senna",
+        "docusate",
+        "macrogol",
+        "lactulose",
+        "bisacodyl",
+        "polyethylene_glycol"
+      ],
+      "rationale": "Opioid-induced constipation prevention",
+      "source": "NICE CG140; WHO Pain Ladder; AGA 2019"
+    },
+    {
+      "trigger_class": "corticosteroid_high",
+      "trigger_drugs": [
+        "prednisolone",
+        "prednisone",
+        "dexamethasone",
+        "methylprednisolone",
+        "hydrocortisone_high"
+      ],
+      "condition": "dose >= 7.5mg prednisolone equiv AND duration > 3 months",
+      "required": "Calcium/Vitamin D + consider bisphosphonate",
+      "check_drugs": [
+        "calcium",
+        "vitamin_d",
+        "colecalciferol",
+        "alendronate",
+        "risedronate",
+        "zoledronic_acid"
+      ],
+      "rationale": "Glucocorticoid-induced osteoporosis prevention",
+      "source": "ACR 2022 GIOP; NICE TA160; NOGG 2021"
+    },
+    {
+      "trigger_class": "methotrexate",
+      "trigger_drugs": [
+        "methotrexate"
+      ],
+      "condition": "always",
+      "required": "Folic acid 5mg weekly (not on methotrexate day)",
+      "check_drugs": [
+        "folic_acid",
+        "folic acid"
+      ],
+      "rationale": "Reduces methotrexate toxicity (mucositis, myelosuppression, hepatotoxicity)",
+      "source": "BSR/BHPR 2017; ACR 2021; Cochrane 2014"
+    },
+    {
+      "trigger_class": "anticoagulant_af",
+      "trigger_drugs": [
+        "warfarin",
+        "rivaroxaban",
+        "apixaban",
+        "dabigatran",
+        "edoxaban"
+      ],
+      "condition": "GI risk factors (age>65, peptic_ulcer_history, concomitant_antiplatelet)",
+      "required": "PPI co-prescription",
+      "check_drugs": [
+        "omeprazole",
+        "pantoprazole",
+        "esomeprazole",
+        "lansoprazole"
+      ],
+      "rationale": "GI bleeding risk reduction with anticoagulants",
+      "source": "ESC 2024 AF; Ray et al. JAMA 2018"
+    },
+    {
+      "trigger_class": "iron_replacement",
+      "trigger_drugs": [
+        "ferrous_sulfate",
+        "ferrous_fumarate",
+        "ferrous_gluconate"
+      ],
+      "condition": "always (if oral iron)",
+      "required": "Take with vitamin C (ascorbic acid) for absorption. Avoid with antacids/PPI timing",
+      "check_drugs": [],
+      "rationale": "Vitamin C increases non-heme iron absorption 2-3 fold",
+      "source": "BNF; WHO Iron Supplementation Guidelines"
+    },
+    {
+      "trigger_class": "ace_inhibitor_arb",
+      "trigger_drugs": [
+        "enalapril",
+        "lisinopril",
+        "ramipril",
+        "perindopril",
+        "losartan",
+        "valsartan",
+        "candesartan",
+        "irbesartan",
+        "telmisartan"
+      ],
+      "condition": "female of childbearing potential",
+      "required": "Pregnancy counseling + reliable contraception",
+      "check_drugs": [],
+      "rationale": "ACEi/ARBs are teratogenic (Category D). MUST NOT be used in pregnancy.",
+      "source": "FDA Black Box Warning; NICE NG133"
+    },
+    {
+      "trigger_class": "clozapine",
+      "trigger_drugs": [
+        "clozapine"
+      ],
+      "condition": "always",
+      "required": "Regular FBC monitoring (weekly for 18 weeks, then monthly)",
+      "check_drugs": [],
+      "rationale": "Agranulocytosis risk (1-2%). Monitoring is mandatory legal requirement.",
+      "source": "NICE CG178; Clozapine REMS; MHRA"
+    },
+    {
+      "trigger_class": "isotretinoin",
+      "trigger_drugs": [
+        "isotretinoin"
+      ],
+      "condition": "female of childbearing potential",
+      "required": "Pregnancy prevention program: 2 forms contraception + monthly pregnancy test",
+      "check_drugs": [],
+      "rationale": "Isotretinoin is a potent teratogen. Pregnancy prevention is legally mandated.",
+      "source": "FDA iPLEDGE; EMA PPP; MHRA"
+    },
+    {
+      "trigger_class": "dmard_monitoring",
+      "trigger_drugs": [
+        "methotrexate",
+        "azathioprine",
+        "leflunomide",
+        "sulfasalazine",
+        "mycophenolate",
+        "hydroxychloroquine"
+      ],
+      "condition": "always",
+      "required": "Baseline FBC + LFTs + U&E; then monitoring per DMARD-specific schedule",
+      "check_drugs": [],
+      "rationale": "Hepatotoxicity, myelosuppression, nephrotoxicity monitoring",
+      "source": "BSR/BHPR DMARD Monitoring 2017; ACR 2021"
+    },
+    {
+      "trigger_class": "amiodarone",
+      "trigger_drugs": [
+        "amiodarone"
+      ],
+      "condition": "always",
+      "required": "Baseline: TFTs + LFTs + CXR + pulmonary function. Then: TFTs q6mo, LFTs q6mo",
+      "check_drugs": [],
+      "rationale": "Thyroid toxicity (hyper/hypo), pulmonary fibrosis, hepatotoxicity",
+      "source": "ESC 2024; NICE CG180; FDA label"
+    },
+    {
+      "trigger_class": "lithium",
+      "trigger_drugs": [
+        "lithium"
+      ],
+      "condition": "always",
+      "required": "Baseline: TFTs + U&E + calcium + ECG. Levels: weekly during titration, then q3-6mo",
+      "check_drugs": [],
+      "rationale": "Thyroid/renal toxicity. Narrow therapeutic index.",
+      "source": "NICE CG185; BAP 2016; Maudsley Prescribing Guidelines"
+    }
+  ]
+}

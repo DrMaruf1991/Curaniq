@@ -1,0 +1,216 @@
+{
+  "_metadata": {
+    "source": "WHO/IFCC reference ranges; clinical laboratory standards",
+    "version": "2024",
+    "note": "Adult reference ranges. Pediatric/pregnancy ranges differ.",
+    "total_entries": 27
+  },
+  "ranges": {
+    "sodium": {
+      "min": 136,
+      "max": 145,
+      "unit": "mmol/L",
+      "critical_low": 120,
+      "critical_high": 160,
+      "loinc": "2951-2"
+    },
+    "potassium": {
+      "min": 3.5,
+      "max": 5.0,
+      "unit": "mmol/L",
+      "critical_low": 2.5,
+      "critical_high": 6.5,
+      "loinc": "2823-3"
+    },
+    "creatinine": {
+      "min": 62,
+      "max": 106,
+      "unit": "umol/L",
+      "critical_high": 800,
+      "loinc": "2160-0",
+      "note": "Male 62-106, Female 44-80"
+    },
+    "urea": {
+      "min": 2.5,
+      "max": 7.8,
+      "unit": "mmol/L",
+      "critical_high": 50,
+      "loinc": "3094-0"
+    },
+    "egfr": {
+      "min": 90,
+      "max": 999,
+      "unit": "mL/min/1.73m2",
+      "critical_low": 15,
+      "loinc": "33914-3"
+    },
+    "alt": {
+      "min": 0,
+      "max": 40,
+      "unit": "U/L",
+      "critical_high": 1000,
+      "loinc": "1742-6"
+    },
+    "ast": {
+      "min": 0,
+      "max": 40,
+      "unit": "U/L",
+      "critical_high": 1000,
+      "loinc": "1920-8"
+    },
+    "bilirubin_total": {
+      "min": 0,
+      "max": 21,
+      "unit": "umol/L",
+      "critical_high": 300,
+      "loinc": "1975-2"
+    },
+    "albumin": {
+      "min": 35,
+      "max": 50,
+      "unit": "g/L",
+      "critical_low": 15,
+      "loinc": "1751-7"
+    },
+    "haemoglobin": {
+      "min": 130,
+      "max": 170,
+      "unit": "g/L",
+      "critical_low": 70,
+      "critical_high": 200,
+      "loinc": "718-7",
+      "note": "Male 130-170, Female 120-150"
+    },
+    "wbc": {
+      "min": 4.0,
+      "max": 11.0,
+      "unit": "x10^9/L",
+      "critical_low": 1.0,
+      "critical_high": 30.0,
+      "loinc": "6690-2"
+    },
+    "platelets": {
+      "min": 150,
+      "max": 400,
+      "unit": "x10^9/L",
+      "critical_low": 20,
+      "critical_high": 1000,
+      "loinc": "777-3"
+    },
+    "inr": {
+      "min": 0.9,
+      "max": 1.1,
+      "unit": "ratio",
+      "critical_high": 5.0,
+      "loinc": "6301-6",
+      "note": "On warfarin target 2.0-3.0"
+    },
+    "glucose_fasting": {
+      "min": 3.9,
+      "max": 5.5,
+      "unit": "mmol/L",
+      "critical_low": 2.2,
+      "critical_high": 25.0,
+      "loinc": "1558-6"
+    },
+    "hba1c": {
+      "min": 20,
+      "max": 42,
+      "unit": "mmol/mol",
+      "critical_high": 120,
+      "loinc": "4548-4",
+      "note": "DM diagnosis >=48 mmol/mol"
+    },
+    "tsh": {
+      "min": 0.4,
+      "max": 4.0,
+      "unit": "mIU/L",
+      "critical_low": 0.01,
+      "critical_high": 100,
+      "loinc": "3016-3"
+    },
+    "crp": {
+      "min": 0,
+      "max": 5,
+      "unit": "mg/L",
+      "critical_high": 200,
+      "loinc": "1988-5"
+    },
+    "troponin_hs": {
+      "min": 0,
+      "max": 14,
+      "unit": "ng/L",
+      "loinc": "89579-7",
+      "note": "99th percentile by assay. Above = myocardial injury"
+    },
+    "bnp": {
+      "min": 0,
+      "max": 100,
+      "unit": "pg/mL",
+      "loinc": "30934-4",
+      "note": "HF unlikely <100, likely >400"
+    },
+    "d_dimer": {
+      "min": 0,
+      "max": 500,
+      "unit": "ng/mL FEU",
+      "loinc": "48065-7",
+      "note": "Age-adjusted: age x 10 if >50y"
+    },
+    "magnesium": {
+      "min": 0.7,
+      "max": 1.0,
+      "unit": "mmol/L",
+      "critical_low": 0.4,
+      "critical_high": 2.0,
+      "loinc": "19123-9"
+    },
+    "calcium_corrected": {
+      "min": 2.2,
+      "max": 2.6,
+      "unit": "mmol/L",
+      "critical_low": 1.5,
+      "critical_high": 3.5,
+      "loinc": "17861-6"
+    },
+    "phosphate": {
+      "min": 0.8,
+      "max": 1.5,
+      "unit": "mmol/L",
+      "critical_low": 0.3,
+      "critical_high": 3.0,
+      "loinc": "2777-1"
+    },
+    "uric_acid": {
+      "min": 200,
+      "max": 430,
+      "unit": "umol/L",
+      "critical_high": 800,
+      "loinc": "3084-1"
+    },
+    "ferritin": {
+      "min": 20,
+      "max": 300,
+      "unit": "ug/L",
+      "critical_low": 10,
+      "loinc": "2276-4",
+      "note": "Iron deficiency <30"
+    },
+    "vitamin_d": {
+      "min": 50,
+      "max": 125,
+      "unit": "nmol/L",
+      "critical_low": 25,
+      "loinc": "1989-3",
+      "note": "Deficient <25, Insufficient 25-49"
+    },
+    "lactate": {
+      "min": 0.5,
+      "max": 2.0,
+      "unit": "mmol/L",
+      "critical_high": 4.0,
+      "loinc": "2524-7",
+      "note": ">=4 = high mortality in sepsis"
+    }
+  }
+}

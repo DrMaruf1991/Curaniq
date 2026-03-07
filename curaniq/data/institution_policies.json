@@ -1,0 +1,80 @@
+{
+  "_metadata": {
+    "source": "Default institutional stewardship policies (customizable per hospital)",
+    "version": "2024",
+    "note": "Override with institution-specific policies via CURANIQ_DATA_DIR",
+    "total_entries": 14
+  },
+  "restrictions": {
+    "meropenem": {
+      "type": "stewardship",
+      "approval": "microbiologist",
+      "reason": "Reserve carbapenem. Requires culture/sensitivity justification."
+    },
+    "imipenem": {
+      "type": "stewardship",
+      "approval": "microbiologist",
+      "reason": "Reserve carbapenem. Culture data required."
+    },
+    "ertapenem": {
+      "type": "stewardship",
+      "approval": "microbiologist",
+      "reason": "Reserve carbapenem (no Pseudomonas coverage)."
+    },
+    "linezolid": {
+      "type": "stewardship",
+      "approval": "infectious_disease",
+      "reason": "Reserve antibiotic. ID consultation required."
+    },
+    "daptomycin": {
+      "type": "stewardship",
+      "approval": "infectious_disease",
+      "reason": "Reserve agent. Not effective for pulmonary infections."
+    },
+    "colistin": {
+      "type": "stewardship",
+      "approval": "infectious_disease",
+      "reason": "Last-line agent. Nephrotoxicity monitoring mandatory."
+    },
+    "tigecycline": {
+      "type": "stewardship",
+      "approval": "infectious_disease",
+      "reason": "Reserve glycylcycline. FDA mortality warning in non-approved indications."
+    },
+    "ceftazidime-avibactam": {
+      "type": "stewardship",
+      "approval": "infectious_disease",
+      "reason": "Reserved for confirmed CRE. Culture mandatory."
+    },
+    "rituximab": {
+      "type": "cost",
+      "approval": "clinical_director",
+      "reason": "High-cost biologic. Requires MDT approval."
+    },
+    "trastuzumab": {
+      "type": "cost",
+      "approval": "oncology_mdt",
+      "reason": "High-cost biologic. HER2+ confirmation required."
+    },
+    "adalimumab": {
+      "type": "cost",
+      "approval": "rheumatology_lead",
+      "reason": "High-cost biologic. Requires specialist initiation."
+    },
+    "infliximab": {
+      "type": "cost",
+      "approval": "gastro_rheum_lead",
+      "reason": "High-cost biologic. Biosimilar preferred."
+    },
+    "nivolumab": {
+      "type": "cost",
+      "approval": "oncology_mdt",
+      "reason": "Immunotherapy. MDT approval + PD-L1 testing required."
+    },
+    "pembrolizumab": {
+      "type": "cost",
+      "approval": "oncology_mdt",
+      "reason": "Immunotherapy. MDT approval + biomarker confirmation."
+    }
+  }
+}
