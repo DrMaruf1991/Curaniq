@@ -1,0 +1,147 @@
+{
+  "_metadata": {
+    "source": "NLM RxNorm; published guideline comparisons; UMLS",
+    "version": "2024"
+  },
+  "ambiguous_mappings": {
+    "metoprolol": [
+      "metoprolol tartrate",
+      "metoprolol succinate"
+    ],
+    "insulin": [
+      "insulin regular",
+      "insulin glargine",
+      "insulin aspart",
+      "insulin lispro",
+      "insulin detemir",
+      "insulin degludec"
+    ],
+    "prednisone": [
+      "prednisone",
+      "prednisolone"
+    ],
+    "adrenaline": [
+      "epinephrine"
+    ],
+    "paracetamol": [
+      "acetaminophen"
+    ],
+    "salbutamol": [
+      "albuterol"
+    ],
+    "furosemide": [
+      "frusemide"
+    ],
+    "nifedipine": [
+      "nifedipine IR",
+      "nifedipine ER"
+    ],
+    "morphine": [
+      "morphine sulfate IR",
+      "morphine sulfate ER"
+    ],
+    "oxycodone": [
+      "oxycodone IR",
+      "oxycodone CR"
+    ]
+  },
+  "atc_rxnorm_class": {
+    "A10BA02": "metformin",
+    "B01AA03": "warfarin",
+    "C09AA05": "ramipril",
+    "C09CA01": "losartan",
+    "C10AA05": "atorvastatin",
+    "J01CA04": "amoxicillin",
+    "N02BE01": "acetaminophen",
+    "N06AB03": "fluoxetine",
+    "C07AB07": "bisoprolol",
+    "C08CA01": "amlodipine",
+    "A02BC01": "omeprazole",
+    "N03AG01": "valproic acid"
+  },
+  "guideline_conflicts": [
+    {
+      "topic": "Hypertension threshold",
+      "a": "AHA/ACC 2017",
+      "rec_a": "Treat >=130/80",
+      "b": "NICE NG136 2023",
+      "rec_b": "Treat >=140/90",
+      "severity": "moderate",
+      "resolution": "Jurisdiction-dependent",
+      "source": "Published comparison studies"
+    },
+    {
+      "topic": "Aspirin primary prevention",
+      "a": "USPSTF 2022",
+      "rec_a": "Do not routinely use",
+      "b": "ESC 2021",
+      "rec_b": "Not recommended (aligned)",
+      "severity": "minor",
+      "resolution": "Consensus against routine use"
+    },
+    {
+      "topic": "Statin intensity in CKD",
+      "a": "KDIGO 2024",
+      "rec_a": "Moderate-intensity for CKD G3-G5",
+      "b": "AHA/ACC 2018",
+      "rec_b": "High-intensity for ASCVD regardless",
+      "severity": "major",
+      "resolution": "KDIGO for renal patients"
+    },
+    {
+      "topic": "HbA1c target elderly",
+      "a": "ADA 2024",
+      "rec_a": "<8.0% for complex older adults",
+      "b": "NICE NG28",
+      "rec_b": "48-58 mmol/mol (6.5-7.5%)",
+      "severity": "moderate",
+      "resolution": "Individualize: ADA more permissive"
+    },
+    {
+      "topic": "Anticoag in AF + CKD",
+      "a": "ESC 2024",
+      "rec_a": "Apixaban preferred in CKD",
+      "b": "AHA 2023",
+      "rec_b": "Consider all DOACs by CrCl",
+      "severity": "moderate",
+      "resolution": "ESC more specific for renal context"
+    }
+  ],
+  "concept_drifts": [
+    {
+      "concept": "diabetes_diagnosis",
+      "old": "FG >=7.0 only",
+      "new": "FG >=7.0 OR HbA1c >=48 mmol/mol",
+      "year": 2011,
+      "source": "WHO 2011; ADA 2010"
+    },
+    {
+      "concept": "hypertension_us",
+      "old": ">=140/90",
+      "new": ">=130/80",
+      "year": 2017,
+      "source": "AHA/ACC 2017"
+    },
+    {
+      "concept": "ckd_classification",
+      "old": "Stages 1-5",
+      "new": "G1-G5 with A1-A3 albuminuria",
+      "year": 2012,
+      "source": "KDIGO 2012"
+    },
+    {
+      "concept": "sepsis_definition",
+      "old": "SIRS + infection",
+      "new": "SOFA >=2 + infection (Sepsis-3)",
+      "year": 2016,
+      "source": "Singer JAMA 2016"
+    },
+    {
+      "concept": "heart_failure_classification",
+      "old": "HFrEF/HFpEF",
+      "new": "HFrEF/HFmrEF/HFpEF/HFimpEF",
+      "year": 2021,
+      "source": "ESC HF 2021"
+    }
+  ]
+}

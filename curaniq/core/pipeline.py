@@ -16,6 +16,7 @@ Wires all components together in the correct sequence:
   12. L9-1  Audit Ledger          → immutable compliance record
 """
 from __future__ import annotations
+import hashlib
 import logging
 import re
 import time
@@ -248,6 +249,28 @@ from curaniq.layers.L5_safety_gates.safety_extensions import (
     SourceTriangulationGate,       # L5-8
     PredictiveClinicalAlertGenerator,  # L5-15
     PatientTrajectoryAnalyzer,     # L5-16
+)
+
+# ── P2 CLUSTER 6: L9/L10 Audit & Testing (11 modules) ──
+from curaniq.layers.L9_L10_extensions.audit_testing_p2 import (
+    C2PACredentialManager,          # L9-2
+    ClinicianOverrideLogger,        # L9-4
+    AISafetyOfficerDashboard,       # L9-5
+    ProductAnalytics,               # L9-8
+    SIEMIntegration,                # L9-9
+    EquityMonitor,                  # L10-3
+    SafetyFuzzTester,               # L10-5
+    EvidenceChangeImpactAnalyzer,   # L10-6
+    ClinicalOutcomeTracker,         # L10-7
+    FeedbackLoopAnalytics,          # L10-8
+    MultilingualEvalHarness,        # L10-9
+)
+# ── P2 CLUSTER 7: L0/L11/L12 Foundation (4 modules) ──
+from curaniq.layers.L0_L11_L12_extensions.foundation_p2 import (
+    PCCPDocumentationGenerator,     # L0-4
+    OfflineEdgeDeployment,          # L11-4
+    OutcomeFeedbackLoop,            # L12-10
+    EvidenceStrengthAdjuster,       # L12-11
 )
 
 # ── P2 CLUSTER 1: L3 Clinical Specialty Engines (12 modules) ──
@@ -666,6 +689,25 @@ class CURANIQPipeline:
         self.triangulation = SourceTriangulationGate()             # L5-8
         self.predictive_alerts = PredictiveClinicalAlertGenerator() # L5-15
         self.trajectory = PatientTrajectoryAnalyzer()              # L5-16
+
+        # ── P2 CLUSTER 6: L9/L10 Audit & Testing ──
+        self.c2pa = C2PACredentialManager()                        # L9-2
+        self.override_logger = ClinicianOverrideLogger()           # L9-4
+        self.safety_dashboard = AISafetyOfficerDashboard()         # L9-5
+        self.analytics = ProductAnalytics()                        # L9-8
+        self.siem = SIEMIntegration()                              # L9-9
+        self.equity_monitor = EquityMonitor()                      # L10-3
+        self.fuzz_tester = SafetyFuzzTester()                      # L10-5
+        self.change_impact = EvidenceChangeImpactAnalyzer()        # L10-6
+        self.outcome_tracker = ClinicalOutcomeTracker()            # L10-7
+        self.feedback_analytics = FeedbackLoopAnalytics()          # L10-8
+        self.multilingual_eval = MultilingualEvalHarness()         # L10-9
+
+        # ── P2 CLUSTER 7: L0/L11/L12 Foundation ──
+        self.pccp_docs = PCCPDocumentationGenerator()              # L0-4
+        self.offline_mode = OfflineEdgeDeployment()                # L11-4
+        self.outcome_feedback = OutcomeFeedbackLoop()              # L12-10
+        self.evidence_adjuster = EvidenceStrengthAdjuster()        # L12-11
 
     def process(self, query: ClinicalQuery) -> CURANIQResponse:
         """
@@ -1427,6 +1469,32 @@ class CURANIQPipeline:
             )
         except Exception:
             pass  # Non-blocking
+
+        # ═══════════════════════════════════════════════════════════════
+        # STAGE 14: L9-8 Analytics + L9-2 C2PA Credentials
+        # ═══════════════════════════════════════════════════════════════
+        try:
+            self.analytics.track(
+                event_type="query",
+                user_role=query.user_role.value if query.user_role else "unknown",
+                duration_ms=elapsed_ms,
+            )
+        except Exception:
+            pass
+
+        try:
+            self.c2pa.generate_credential(
+                query_id=str(query.query_id),
+                output_text=summary_text,
+                model_used="claude-sonnet-4-20250514",
+                evidence_hashes=[hashlib.sha256(e.snippet.encode()).hexdigest()[:16]
+                                 for e in evidence_pack.objects[:10]],
+                gates_passed=[g.gate_name for g in safety_suite_result.gate_results
+                              if hasattr(g, 'gate_name') and g.passed]
+                             if hasattr(safety_suite_result, 'gate_results') else [],
+            )
+        except Exception:
+            pass
 
         return CURANIQResponse(
             query_id=query.query_id,

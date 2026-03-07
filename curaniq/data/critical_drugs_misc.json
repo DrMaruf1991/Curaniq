@@ -1,0 +1,40 @@
+{
+  "_metadata": {
+    "source": "Clinical pharmacology; CURANIQ regression test suite",
+    "version": "2024"
+  },
+  "critical_drugs_for_reconciliation": [
+    "warfarin",
+    "rivaroxaban",
+    "apixaban",
+    "dabigatran",
+    "edoxaban",
+    "enoxaparin",
+    "insulin",
+    "insulin_glargine",
+    "insulin_aspart",
+    "metformin",
+    "levothyroxine",
+    "prednisolone",
+    "prednisone",
+    "dexamethasone",
+    "tacrolimus",
+    "cyclosporine",
+    "mycophenolate",
+    "azathioprine",
+    "carbamazepine",
+    "phenytoin",
+    "valproic_acid",
+    "lamotrigine",
+    "lithium",
+    "methadone",
+    "buprenorphine",
+    "naltrexone",
+    "bisoprolol",
+    "atenolol",
+    "digoxin",
+    "amiodarone",
+    "clozapine",
+    "levodopa"
+  ]
+}

@@ -1,0 +1,136 @@
+{
+  "_metadata": {
+    "source": "ESC 2024 AF Guidelines; CHEST 2021; FDA labels",
+    "version": "2024",
+    "total_entries": 11
+  },
+  "doac_dosing": {
+    "rivaroxaban": {
+      "af": {
+        "normal": "20mg OD with food",
+        "crcl_30_49": "15mg OD with food",
+        "crcl_15_29": "15mg OD (caution)",
+        "crcl_lt_15": "AVOID",
+        "source": "ESC 2024"
+      },
+      "vte_treatment": {
+        "normal": "15mg BID x21d then 20mg OD",
+        "crcl_30_49": "15mg BID x21d then 20mg OD",
+        "crcl_lt_30": "AVOID",
+        "source": "EINSTEIN-DVT/PE"
+      }
+    },
+    "apixaban": {
+      "af": {
+        "normal": "5mg BID",
+        "reduced": "2.5mg BID (>=2 of: age>=80, weight<=60kg, Cr>=1.5)",
+        "crcl_15_29": "5mg or 2.5mg BID per criteria",
+        "crcl_lt_15": "Limited data",
+        "dialysis": "5mg or 2.5mg BID (not removed by HD)",
+        "source": "ESC 2024; ARISTOTLE"
+      }
+    },
+    "dabigatran": {
+      "af": {
+        "normal": "150mg BID",
+        "age_80_plus": "110mg BID",
+        "crcl_30_49": "150mg or 110mg BID",
+        "crcl_lt_30": "Contraindicated (US); 75mg BID (EU caution)",
+        "source": "ESC 2024; RE-LY"
+      }
+    },
+    "edoxaban": {
+      "af": {
+        "normal": "60mg OD",
+        "reduced": "30mg OD (CrCl 15-50, weight<=60kg, P-gp inhibitor)",
+        "crcl_lt_15": "Not recommended",
+        "crcl_gt_95": "Avoid (reduced efficacy)",
+        "source": "ESC 2024; ENGAGE AF-TIMI 48"
+      }
+    }
+  },
+  "reversal_agents": {
+    "warfarin": {
+      "agent": "Vitamin K 5-10mg IV + 4-factor PCC",
+      "onset": "2-4h (VitK), immediate (PCC)",
+      "source": "ASH 2021; CHEST 2021"
+    },
+    "rivaroxaban": {
+      "agent": "Andexanet alfa or 4-factor PCC 50 IU/kg",
+      "onset": "Minutes (andexanet)",
+      "source": "ANNEXA-4; ESC 2024"
+    },
+    "apixaban": {
+      "agent": "Andexanet alfa or 4-factor PCC 50 IU/kg",
+      "onset": "Minutes (andexanet)",
+      "source": "ANNEXA-4; ESC 2024"
+    },
+    "dabigatran": {
+      "agent": "Idarucizumab 5g IV",
+      "onset": "Minutes",
+      "source": "RE-VERSE AD; FDA 2015"
+    },
+    "edoxaban": {
+      "agent": "4-factor PCC 50 IU/kg (no specific antidote)",
+      "onset": "15-30min",
+      "source": "CHEST 2021"
+    },
+    "enoxaparin": {
+      "agent": "Protamine 1mg per 1mg enoxaparin (60-75% reversal)",
+      "onset": "5min",
+      "source": "CHEST 2021"
+    },
+    "heparin": {
+      "agent": "Protamine 1mg per 100 units UFH (max 50mg)",
+      "onset": "5min",
+      "source": "CHEST 2021"
+    }
+  },
+  "has_bled_factors": [
+    {
+      "name": "hypertension",
+      "points": 1,
+      "description": "Uncontrolled SBP >160"
+    },
+    {
+      "name": "renal_impairment",
+      "points": 1,
+      "description": "Dialysis, transplant, Cr >2.3"
+    },
+    {
+      "name": "liver_impairment",
+      "points": 1,
+      "description": "Cirrhosis, bilirubin >2x, ALT/AST >3x"
+    },
+    {
+      "name": "stroke_history",
+      "points": 1,
+      "description": "Prior stroke"
+    },
+    {
+      "name": "bleeding_history",
+      "points": 1,
+      "description": "Prior major bleeding"
+    },
+    {
+      "name": "labile_inr",
+      "points": 1,
+      "description": "TTR <60% on warfarin"
+    },
+    {
+      "name": "age_over_65",
+      "points": 1,
+      "description": "Age >65"
+    },
+    {
+      "name": "antiplatelet_nsaid",
+      "points": 1,
+      "description": "Concomitant antiplatelet/NSAID"
+    },
+    {
+      "name": "alcohol_excess",
+      "points": 1,
+      "description": ">=8 drinks/week"
+    }
+  ]
+}

@@ -182,14 +182,13 @@ class MedicationReconciliationEngine:
     """
 
     # Critical drugs loaded once — omission = high severity
-    _CRITICAL_DRUGS: set[str] = {
-        "warfarin", "rivaroxaban", "apixaban", "dabigatran", "enoxaparin",
-        "insulin", "metformin", "levothyroxine", "prednisolone", "prednisone",
-        "tacrolimus", "cyclosporine", "mycophenolate",
-        "carbamazepine", "phenytoin", "valproic acid", "lithium",
-        "methadone", "buprenorphine",
-        "bisoprolol", "atenolol", "digoxin", "amiodarone",
-    }
+    _CRITICAL_DRUGS: set[str] = set()  # Loaded in __init__
+
+    def __init__(self):
+        from curaniq.data_loader import load_json_data
+        raw = load_json_data("critical_drugs_misc.json")
+        self.__class__._CRITICAL_DRUGS = set(raw.get("critical_drugs_for_reconciliation", []))
+        logger.info("MedicationReconciliationEngine: %d critical drugs", len(self._CRITICAL_DRUGS))
 
     def reconcile(
         self,

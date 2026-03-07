@@ -195,43 +195,7 @@ class SourceQualityScorer:
     }
 
     # Real journal quartiles from JCR 2024 data (Medicine, General & Internal)
-    # ISSN → quartile. Q1=top 25% by impact factor.
-    # Source: Clarivate Journal Citation Reports 2024
-    JOURNAL_QUARTILES: dict[str, int] = {
-        # Q1 — Impact Factor >10
-        "the lancet": 1, "new england journal of medicine": 1, "nejm": 1,
-        "the bmj": 1, "bmj": 1, "jama": 1,
-        "nature medicine": 1, "annals of internal medicine": 1,
-        "lancet infectious diseases": 1, "lancet oncology": 1,
-        "lancet neurology": 1, "lancet respiratory medicine": 1,
-        "lancet diabetes & endocrinology": 1, "lancet psychiatry": 1,
-        "cochrane database of systematic reviews": 1,
-        "circulation": 1, "european heart journal": 1,
-        "journal of clinical oncology": 1, "gastroenterology": 1,
-        "gut": 1, "hepatology": 1, "diabetes care": 1,
-        "chest": 1, "thorax": 1, "kidney international": 1,
-        "american journal of respiratory and critical care medicine": 1,
-        "clinical infectious diseases": 1,
-        # Q2 — Impact Factor 5-10
-        "plos medicine": 2, "bmc medicine": 2,
-        "journal of antimicrobial chemotherapy": 2,
-        "clinical pharmacology & therapeutics": 2,
-        "british journal of clinical pharmacology": 2,
-        "pharmacotherapy": 2, "drugs": 2, "drug safety": 2,
-        "european journal of clinical pharmacology": 2,
-        "international journal of antimicrobial agents": 2,
-        "journal of the american geriatrics society": 2,
-        "age and ageing": 2, "archives of disease in childhood": 2,
-        "obstetrics & gynecology": 2,
-        # Q3 — Impact Factor 2-5
-        "annals of pharmacotherapy": 3,
-        "journal of clinical pharmacy and therapeutics": 3,
-        "therapeutic advances in drug safety": 3,
-        "expert opinion on drug safety": 3,
-        "current drug safety": 3,
-        # Q4 — Impact Factor <2
-        "journal of basic and clinical pharmacy": 4,
-    }
+    # Journal quartiles loaded from curaniq/data/journal_quartiles.json
 
     WEIGHTS = {
         "design": 0.30,
@@ -248,6 +212,11 @@ class SourceQualityScorer:
             if known_name in name_lower or name_lower in known_name:
                 return quartile
         return 3  # Unknown journals default to Q3 (conservative)
+
+    def __init__(self):
+        from curaniq.data_loader import load_json_data
+        raw = load_json_data("journal_quartiles.json")
+        self.JOURNAL_QUARTILES = raw.get("quartiles", {})
 
     def score_source(
         self,

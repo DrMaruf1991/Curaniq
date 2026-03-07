@@ -237,74 +237,22 @@ class AnticoagulationAlert:
 
 
 class AnticoagulationEngine:
-    """
-    L3-11: Anticoagulation-specific safety engine.
+    """L3-11: Anticoagulation safety. Data from anticoagulation_data.json."""
 
-    Covers:
-    - Warfarin dose initiation (Gage algorithm factors)
-    - DOAC dose selection by indication + renal function + weight
-    - Bridging anticoagulation rules (BRIDGE trial: NEJM 2015)
-    - Bleeding risk scoring (HAS-BLED)
-    - Reversal agent mapping (idarucizumab, andexanet, vitamin K, PCC)
-    - Critical DDIs with anticoagulants
-    """
-
-    # DOAC dosing by indication and renal function
-    # Source: ESC 2024; FDA prescribing information
-    DOAC_DOSING: dict[str, dict[str, dict]] = {
-        "rivaroxaban": {
-            "af": {  # Atrial fibrillation
-                "normal":     {"dose": "20mg OD with food", "source": "ESC 2024"},
-                "crcl_30_49": {"dose": "15mg OD with food", "source": "FDA label; ESC 2024"},
-                "crcl_15_29": {"dose": "15mg OD with food (use with caution)", "source": "FDA label"},
-                "crcl_lt_15": {"dose": "AVOID", "source": "FDA label; ESC 2024"},
-            },
-            "vte_treatment": {
-                "normal":     {"dose": "15mg BID x21 days then 20mg OD with food", "source": "EINSTEIN-DVT/PE"},
-                "crcl_30_49": {"dose": "15mg BID x21 days then 20mg OD", "source": "FDA label"},
-                "crcl_lt_30": {"dose": "AVOID if CrCl <30", "source": "FDA label"},
-            },
-        },
-        "apixaban": {
-            "af": {
-                "normal":     {"dose": "5mg BID", "source": "ESC 2024; ARISTOTLE"},
-                "reduced":    {"dose": "2.5mg BID if >=2 of: age>=80, weight<=60kg, Cr>=1.5mg/dL", "source": "FDA label; ESC 2024"},
-                "crcl_15_29": {"dose": "5mg BID (or 2.5mg BID if dose reduction criteria met)", "source": "FDA label"},
-                "crcl_lt_15": {"dose": "Limited data. 5mg or 2.5mg BID based on clinical judgment.", "source": "FDA label"},
-                "dialysis":   {"dose": "5mg BID (or 2.5mg BID per criteria). Not removed by dialysis.", "source": "FDA label 2024 update"},
-            },
-        },
-    }
-
-    # Reversal agents (evidence-based mapping)
-    REVERSAL_MAP: dict[str, dict] = {
-        "warfarin":      {"agent": "Vitamin K 5-10mg IV + 4-factor PCC", "onset": "2-4h (Vit K), immediate (PCC)", "source": "ASH 2021; CHEST 2021"},
-        "rivaroxaban":   {"agent": "Andexanet alfa (if available) or 4-factor PCC 50 IU/kg", "onset": "Minutes (andexanet), 15-30min (PCC)", "source": "ANNEXA-4 trial; ESC 2024"},
-        "apixaban":      {"agent": "Andexanet alfa (if available) or 4-factor PCC 50 IU/kg", "onset": "Minutes (andexanet)", "source": "ANNEXA-4 trial; ESC 2024"},
-        "dabigatran":    {"agent": "Idarucizumab 5g IV", "onset": "Minutes", "source": "RE-VERSE AD trial; FDA approved 2015"},
-        "enoxaparin":    {"agent": "Protamine 1mg per 1mg enoxaparin (60-75% reversal)", "onset": "5min", "source": "CHEST 2021"},
-        "heparin":       {"agent": "Protamine 1mg per 100 units UFH (max 50mg)", "onset": "5min", "source": "CHEST 2021"},
-    }
-
-    # HAS-BLED score components
-    # Source: Pisters et al. Chest 2010;138(5):1093-1100
-    HAS_BLED_FACTORS = [
-        ("hypertension", 1, "Uncontrolled SBP >160 mmHg"),
-        ("renal_impairment", 1, "Dialysis, transplant, Cr >2.3 mg/dL"),
-        ("liver_impairment", 1, "Cirrhosis, bilirubin >2x ULN, AST/ALT >3x ULN"),
-        ("stroke_history", 1, "Prior stroke"),
-        ("bleeding_history", 1, "Prior major bleeding or predisposition"),
-        ("labile_inr", 1, "TTR <60% on warfarin"),
-        ("age_over_65", 1, "Age >65"),
-        ("antiplatelet_nsaid", 1, "Concomitant antiplatelet or NSAID"),
-        ("alcohol_excess", 1, ">=8 drinks/week"),
-    ]
+    def __init__(self):
+        from curaniq.data_loader import load_json_data
+        raw = load_json_data("anticoagulation_data.json")
+        self._doac_dosing = raw.get("doac_dosing", {})
+        self._reversal_map = raw.get("reversal_agents", {})
+        self._has_bled_factors = raw.get("has_bled_factors", [])
+        logger.info("AnticoagulationEngine: %d DOACs, %d reversal agents",
+                     len(self._doac_dosing), len(self._reversal_map))
 
     def calculate_has_bled(self, factors: dict[str, bool]) -> tuple[int, str]:
         """Calculate HAS-BLED bleeding risk score."""
         score = sum(
-            points for factor_name, points, _ in self.HAS_BLED_FACTORS
-            if factors.get(factor_name, False)
+            f.get("points", 0) for f in self._has_bled_factors
+            if factors.get(f.get("name", ""), False)
         )
         risk = "low" if score <= 2 else "high"
         return score, risk
@@ -316,7 +264,7 @@ class AnticoagulationEngine:
                       creatinine_mg_dl: Optional[float] = None) -> Optional[dict]:
         """Get indication-specific DOAC dosing with renal adjustment."""
         drug_lower = drug.lower().strip()
-        drug_table = self.DOAC_DOSING.get(drug_lower)
+        drug_table = self._doac_dosing.get(drug_lower)
         if not drug_table:
             return None
         indication_table = drug_table.get(indication)
@@ -346,7 +294,7 @@ class AnticoagulationEngine:
 
     def get_reversal(self, drug: str) -> Optional[dict]:
         """Get reversal agent protocol for an anticoagulant."""
-        return self.REVERSAL_MAP.get(drug.lower().strip())
+        return self._reversal_map.get(drug.lower().strip())
 
 
 # =============================================================================
@@ -368,73 +316,13 @@ class TDMDrug:
 
 
 class TDMPKPDEngine:
-    """
-    L3-18: Therapeutic Drug Monitoring & Pharmacokinetic engine.
+    """L3-18: TDM & PK-PD. Data from tdm_drugs.json."""
 
-    Covers narrow therapeutic index (NTI) drugs:
-    - Aminoglycosides (gentamicin, tobramycin, amikacin)
-    - Vancomycin (AUC-guided per IDSA/ASHP 2020)
-    - Lithium
-    - Digoxin
-    - Phenytoin (total and free levels, Sheiner-Tozer correction)
-    - Carbamazepine, valproic acid
-    - Theophylline
-    - Cyclosporine, tacrolimus
-
-    All calculations deterministic. Provides:
-    - Therapeutic range checking
-    - Sheiner-Tozer correction for phenytoin in hypoalbuminemia
-    - Half-life estimation adjusted for renal function
-    - Dosing interval recommendations
-    """
-
-    TDM_DATABASE: dict[str, TDMDrug] = {
-        "vancomycin": TDMDrug(
-            "vancomycin", (15.0, 20.0), 40.0, (4.0, 11.0), 55.0, 90.0, True,
-            "AUC/MIC 400-600 (preferred). If trough-based: 15-20 mg/L for serious infections.",
-            "IDSA/ASHP 2020 Vancomycin Consensus Guidelines",
-        ),
-        "gentamicin": TDMDrug(
-            "gentamicin", (0.5, 2.0), 12.0, (2.0, 3.0), 30.0, 95.0, True,
-            "Trough <1 mg/L (extended interval). Peak 5-10 mg/L (conventional).",
-            "Sanford Guide 2024; IDSA guidelines",
-        ),
-        "lithium": TDMDrug(
-            "lithium", (0.6, 1.0), 1.5, (18.0, 36.0), 0.0, 95.0, True,
-            "Level 12h post-dose. Weekly during titration, then q3-6mo when stable.",
-            "NICE CG185; BAP 2016 guidelines",
-        ),
-        "digoxin": TDMDrug(
-            "digoxin", (0.5, 0.9), 2.0, (36.0, 48.0), 25.0, 60.0, False,
-            "Level >=6h post-dose. Target 0.5-0.9 ng/mL in HF (DIG trial subanalysis).",
-            "NICE NG106; DIG trial; ACC/AHA 2022",
-        ),
-        "phenytoin": TDMDrug(
-            "phenytoin", (10.0, 20.0), 30.0, (12.0, 36.0), 90.0, 5.0, False,
-            "Total level 10-20 mg/L. Free level 1-2 mg/L (if hypoalbuminemia or renal failure).",
-            "NICE NG217; Winter's Clinical Pharmacokinetics",
-        ),
-        "carbamazepine": TDMDrug(
-            "carbamazepine", (4.0, 12.0), 15.0, (12.0, 17.0), 75.0, 3.0, False,
-            "Trough level. Auto-induction: repeat level 2-4 weeks after dose change.",
-            "NICE NG217; ILAE guidelines",
-        ),
-        "valproic_acid": TDMDrug(
-            "valproic acid", (50.0, 100.0), 150.0, (8.0, 20.0), 90.0, 3.0, False,
-            "Trough level pre-dose. Free level if albumin low or total >100 mg/L.",
-            "NICE NG217; ILAE guidelines",
-        ),
-        "tacrolimus": TDMDrug(
-            "tacrolimus", (5.0, 15.0), 20.0, (8.0, 12.0), 99.0, 2.0, False,
-            "Trough (C0) level. Target varies by transplant type and time post-transplant.",
-            "KDIGO Transplant 2009; ISHLT 2010",
-        ),
-        "cyclosporine": TDMDrug(
-            "cyclosporine", (100.0, 300.0), 400.0, (6.0, 12.0), 98.0, 6.0, False,
-            "Trough (C0) or C2 (2h post-dose) level. Target varies by indication.",
-            "KDIGO Transplant 2009",
-        ),
-    }
+    def __init__(self):
+        from curaniq.data_loader import load_json_data
+        raw = load_json_data("tdm_drugs.json")
+        self._tdm_db = raw.get("drugs", {})
+        logger.info("TDMPKPDEngine: %d NTI drugs", len(self._tdm_db))
 
     def check_level(self, drug: str, measured_level: float,
                     albumin: Optional[float] = None,
@@ -444,7 +332,7 @@ class TDMPKPDEngine:
         Applies Sheiner-Tozer correction for phenytoin if needed.
         """
         drug_lower = drug.lower().strip()
-        tdm = self.TDM_DATABASE.get(drug_lower)
+        tdm = self._tdm_db.get(drug_lower)
         if not tdm:
             return {"known": False, "drug": drug}
 
@@ -460,15 +348,15 @@ class TDMPKPDEngine:
             corrected_level = measured_level / correction_factor
             level = corrected_level
 
-        min_range, max_range = tdm.therapeutic_range_trough
+        min_range, max_range = (tdm.get('trough_min', 0), tdm.get('trough_max', 999))
 
         if level < min_range:
             status = "subtherapeutic"
             action = "Consider dose increase. Repeat level after 3-5 half-lives at new dose."
-        elif level > tdm.toxic_level:
+        elif level > tdm.get('toxic', 999):
             status = "toxic"
             action = "HOLD dose. Monitor for toxicity signs. Repeat level in 24-48h. " + (
-                "Dialysis may be considered." if tdm.dialyzable else "Not dialyzable."
+                "Dialysis may be considered." if tdm.get('dialyzable', False) else "Not dialyzable."
             )
         elif level > max_range:
             status = "supratherapeutic"
@@ -483,11 +371,11 @@ class TDMPKPDEngine:
             "measured_level": measured_level,
             "interpreted_level": round(level, 2),
             "range": f"{min_range}-{max_range}",
-            "toxic_above": tdm.toxic_level,
+            "toxic_above": tdm.get('toxic', 999),
             "status": status,
             "action": action,
-            "monitoring": tdm.monitoring_frequency,
-            "source": tdm.source,
+            "monitoring": tdm.get('monitoring', ''),
+            "source": tdm.get('source', ''),
         }
 
         if drug_lower == "phenytoin" and albumin and albumin < 3.5:
@@ -500,12 +388,12 @@ class TDMPKPDEngine:
     def estimate_adjusted_half_life(self, drug: str, egfr: float) -> Optional[float]:
         """Estimate drug half-life adjusted for renal function."""
         drug_lower = drug.lower().strip()
-        tdm = self.TDM_DATABASE.get(drug_lower)
+        tdm = self._tdm_db.get(drug_lower)
         if not tdm:
             return None
 
-        normal_t12_avg = (tdm.half_life_hours[0] + tdm.half_life_hours[1]) / 2
-        renal_fraction = tdm.renal_clearance_pct / 100.0
+        normal_t12_avg = ((tdm.get('half_life_h', [6, 12])[0], tdm.get('half_life_h', [6, 12])[1])[0] + (tdm.get('half_life_h', [6, 12])[0], tdm.get('half_life_h', [6, 12])[1])[1]) / 2
+        renal_fraction = tdm.get('renal_clearance_pct', 0) / 100.0
 
         # Q factor method: t1/2_adjusted = t1/2_normal / Q
         # Q = 1 - renal_fraction * (1 - egfr/120)

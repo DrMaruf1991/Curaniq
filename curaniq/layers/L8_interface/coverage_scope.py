@@ -72,69 +72,23 @@ class MedicationCoverageScopeFence:
 
     # ATC codes with Phase 1 validation status
     # Format: ATC prefix -> (status, description)
-    VALIDATED_ATC_PREFIXES: dict[str, tuple[CoverageStatus, str]] = {
-        "A02": (CoverageStatus.VALIDATED, "Antacids, anti-ulcerants"),
-        "A10": (CoverageStatus.VALIDATED, "Antidiabetics"),
-        "B01": (CoverageStatus.VALIDATED, "Antithrombotics"),
-        "C01": (CoverageStatus.VALIDATED, "Cardiac therapy"),
-        "C02": (CoverageStatus.VALIDATED, "Antihypertensives"),
-        "C03": (CoverageStatus.VALIDATED, "Diuretics"),
-        "C07": (CoverageStatus.VALIDATED, "Beta-blockers"),
-        "C08": (CoverageStatus.VALIDATED, "Calcium channel blockers"),
-        "C09": (CoverageStatus.VALIDATED, "ACE inhibitors / ARBs"),
-        "C10": (CoverageStatus.VALIDATED, "Lipid modifying agents"),
-        "G04": (CoverageStatus.PARTIAL, "Urologicals"),
-        "H02": (CoverageStatus.VALIDATED, "Corticosteroids"),
-        "J01": (CoverageStatus.VALIDATED, "Antibacterials"),
-        "J05": (CoverageStatus.PARTIAL, "Antivirals"),
-        "L01": (CoverageStatus.PARTIAL, "Antineoplastics -- safety only, not dosing"),
-        "M01": (CoverageStatus.VALIDATED, "Anti-inflammatory / antirheumatic"),
-        "N02": (CoverageStatus.VALIDATED, "Analgesics"),
-        "N03": (CoverageStatus.VALIDATED, "Antiepileptics"),
-        "N05": (CoverageStatus.VALIDATED, "Psycholeptics"),
-        "N06": (CoverageStatus.VALIDATED, "Psychoanaleptics"),
-        "R03": (CoverageStatus.VALIDATED, "Obstructive airway drugs"),
-        "R06": (CoverageStatus.VALIDATED, "Antihistamines"),
-    }
 
-    # Explicitly out of scope
-    OUT_OF_SCOPE_PATTERNS: list[re.Pattern] = [
-        re.compile(r'\b(veterinary|animal|canine|feline|equine)\b', re.I),
-        re.compile(r'\b(compounding|compounded|magistral)\b', re.I),
-        re.compile(r'\b(investigational|experimental|phase\s*[0-3]\s*trial|pre-?approval)\b', re.I),
-        re.compile(r'\b(homeopath|naturopath|ayurved)\b', re.I),
-    ]
 
-    # Well-known drug name -> ATC prefix mapping (INN names)
-    DRUG_ATC_MAP: dict[str, str] = {
-        "metformin": "A10", "empagliflozin": "A10", "semaglutide": "A10",
-        "insulin": "A10", "gliclazide": "A10", "sitagliptin": "A10",
-        "warfarin": "B01", "heparin": "B01", "enoxaparin": "B01",
-        "rivaroxaban": "B01", "apixaban": "B01", "dabigatran": "B01",
-        "aspirin": "B01", "clopidogrel": "B01",
-        "amlodipine": "C08", "lisinopril": "C09", "enalapril": "C09",
-        "valsartan": "C09", "losartan": "C09", "atorvastatin": "C10",
-        "rosuvastatin": "C10", "bisoprolol": "C07", "metoprolol": "C07",
-        "furosemide": "C03", "hydrochlorothiazide": "C03", "spironolactone": "C03",
-        "digoxin": "C01", "amiodarone": "C01",
-        "amoxicillin": "J01", "azithromycin": "J01", "ciprofloxacin": "J01",
-        "vancomycin": "J01", "gentamicin": "J01", "meropenem": "J01",
-        "fluconazole": "J02", "ibuprofen": "M01", "naproxen": "M01",
-        "acetaminophen": "N02", "paracetamol": "N02",
-        "fluoxetine": "N06", "sertraline": "N06", "escitalopram": "N06",
-        "lithium": "N05", "valproic acid": "N03", "carbamazepine": "N03",
-        "phenytoin": "N03", "pregabalin": "N03",
-        "prednisolone": "H02", "dexamethasone": "H02",
-        "salbutamol": "R03", "budesonide": "R03",
-        "omeprazole": "A02", "pantoprazole": "A02",
-    }
+
+    def __init__(self):
+        import re as _re
+        from curaniq.data_loader import load_json_data
+        raw = load_json_data("coverage_scope_data.json")
+        self.VALIDATED_ATC_PREFIXES = raw.get("validated_atc_prefixes", {})
+        self.DRUG_ATC_MAP = raw.get("drug_atc_map", {})
+        self.OUT_OF_SCOPE_PATTERNS = [_re.compile(p, _re.I) for p in raw.get("out_of_scope_patterns", [])]
 
     def check_scope(self, drugs: list[str], query_text: str = "") -> ScopeCheckResult:
         """Check if all drugs and the query are within validated scope."""
         result = ScopeCheckResult()
 
         # Check for explicit out-of-scope patterns
-        for pattern in self.OUT_OF_SCOPE_PATTERNS:
+        for pattern in self._out_of_scope:
             if pattern.search(query_text):
                 result.in_scope = False
                 result.coverage_status = CoverageStatus.OUT_OF_SCOPE
@@ -149,10 +103,10 @@ class MedicationCoverageScopeFence:
         # Check each drug
         for drug in drugs:
             drug_lower = drug.lower().strip()
-            atc = self.DRUG_ATC_MAP.get(drug_lower, "")
+            atc = self._drug_atc.get(drug_lower, "")
 
             if atc:
-                prefix_status = self.VALIDATED_ATC_PREFIXES.get(atc[:3])
+                prefix_status = self._atc_prefixes.get(atc[:3])
                 if prefix_status:
                     status, desc = prefix_status
                     if status == CoverageStatus.VALIDATED:

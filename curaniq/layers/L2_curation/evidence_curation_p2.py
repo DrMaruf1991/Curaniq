@@ -55,28 +55,13 @@ class OntologyCrossMapValidator:
     - Concept mismatch (e.g., brand mapped to wrong generic)
     """
 
-    # Known ambiguous drug mappings requiring manual verification
-    # Source: NLM RxNorm documentation, UMLS Metathesaurus
-    AMBIGUOUS_MAPPINGS: dict[str, list[str]] = {
-        "metoprolol": ["metoprolol tartrate", "metoprolol succinate"],
-        "insulin": ["insulin regular", "insulin glargine", "insulin aspart", "insulin lispro", "insulin detemir"],
-        "prednisone": ["prednisone", "prednisolone"],  # Often confused
-        "adrenaline": ["epinephrine"],  # Regional name difference
-        "paracetamol": ["acetaminophen"],  # Regional name difference
-        "salbutamol": ["albuterol"],  # Regional name difference
-    }
 
-    # ATC to RxNorm class verification
-    ATC_RXNORM_CLASS: dict[str, str] = {
-        "A10BA02": "metformin",
-        "B01AA03": "warfarin",
-        "C09AA05": "ramipril",
-        "C09CA01": "losartan",
-        "C10AA05": "atorvastatin",
-        "J01CA04": "amoxicillin",
-        "N02BE01": "acetaminophen",
-        "N06AB03": "fluoxetine",
-    }
+
+    def __init__(self):
+        from curaniq.data_loader import load_json_data
+        raw = load_json_data("curation_reference_data.json")
+        self.AMBIGUOUS_MAPPINGS = raw.get("ambiguous_mappings", {})
+        self.ATC_RXNORM_CLASS = raw.get("atc_rxnorm_class", {})
 
     def validate_mapping(
         self,
@@ -94,19 +79,19 @@ class OntologyCrossMapValidator:
 
         # Check for known ambiguities
         name_lower = source_name.lower().strip()
-        if name_lower in self.AMBIGUOUS_MAPPINGS:
+        if name_lower in self._ambiguous:
             result.mapping_quality = "broader"
             result.confidence = 0.7
             result.warning = (
                 f"Ambiguous mapping: '{source_name}' could refer to: "
-                f"{', '.join(self.AMBIGUOUS_MAPPINGS[name_lower])}. "
+                f"{', '.join(self._ambiguous[name_lower])}. "
                 "Verify specific formulation."
             )
             return result
 
         # ATC-RxNorm cross-check
         if source_system.upper() == "ATC" and target_system.upper() == "RXNORM":
-            expected = self.ATC_RXNORM_CLASS.get(source_code)
+            expected = self._atc_rxnorm.get(source_code)
             if expected and expected.lower() != name_lower:
                 result.mapping_quality = "related"
                 result.confidence = 0.5
@@ -120,7 +105,7 @@ class OntologyCrossMapValidator:
     def check_regional_equivalence(self, drug_a: str, drug_b: str) -> bool:
         """Check if two drug names are regional equivalents."""
         a_lower, b_lower = drug_a.lower().strip(), drug_b.lower().strip()
-        for name, aliases in self.AMBIGUOUS_MAPPINGS.items():
+        for name, aliases in self._ambiguous.items():
             names = {name} | {a.lower() for a in aliases}
             if a_lower in names and b_lower in names:
                 return True
@@ -167,59 +152,26 @@ class GuidelineConflictResolver:
 
     # Known guideline conflicts (evidence-based, documented in literature)
     # Source: systematic comparison studies, Cochrane overviews
-    KNOWN_CONFLICTS: list[GuidelineConflict] = [
-        GuidelineConflict(
-            topic="Hypertension treatment threshold",
-            guideline_a="AHA/ACC 2017",
-            recommendation_a="Treat at >=130/80 mmHg for most adults",
-            guideline_b="NICE NG136 2023",
-            recommendation_b="Treat at >=140/90 mmHg (>=150/90 if age >80)",
-            severity=ConflictSeverity.MODERATE,
-            resolution_strategy="Apply jurisdiction-specific threshold. "
-                "AHA for US patients, NICE for UK, WHO for international.",
-            source_priority="Jurisdiction-dependent",
-        ),
-        GuidelineConflict(
-            topic="Aspirin for primary prevention",
-            guideline_a="USPSTF 2022",
-            recommendation_a="Do not routinely use aspirin for primary prevention of CVD",
-            guideline_b="ESC 2021",
-            recommendation_b="Not recommended for primary prevention (aligned)",
-            severity=ConflictSeverity.MINOR,
-            resolution_strategy="Consensus: avoid aspirin for primary prevention. "
-                "Individual risk-benefit in high-risk patients only.",
-            source_priority="Aligned (both against routine use)",
-        ),
-        GuidelineConflict(
-            topic="Statin intensity in CKD",
-            guideline_a="KDIGO 2024",
-            recommendation_a="Moderate-intensity statin for CKD G3-G5 not on dialysis",
-            guideline_b="AHA/ACC 2018",
-            recommendation_b="High-intensity statin for ASCVD regardless of CKD stage",
-            severity=ConflictSeverity.MAJOR,
-            resolution_strategy="KDIGO more conservative for CKD patients due to "
-                "pharmacokinetic changes and rhabdomyolysis risk. "
-                "Use KDIGO for CKD-specific decisions.",
-            source_priority="KDIGO for renal patients; AHA for general CVD",
-        ),
-        GuidelineConflict(
-            topic="HbA1c target in elderly diabetics",
-            guideline_a="ADA 2024",
-            recommendation_a="HbA1c <8.0% for complex/intermediate health older adults",
-            guideline_b="NICE NG28 2022",
-            recommendation_b="HbA1c 48-58 mmol/mol (6.5-7.5%) for type 2 diabetes",
-            severity=ConflictSeverity.MODERATE,
-            resolution_strategy="ADA more permissive for elderly with comorbidities. "
-                "Individualize based on life expectancy, hypoglycemia risk, frailty.",
-            source_priority="ADA for geriatric-specific; NICE for general targets",
-        ),
-    ]
+
+    def __init__(self):
+        from curaniq.data_loader import load_json_data
+        raw = load_json_data("curation_reference_data.json")
+        self.KNOWN_CONFLICTS = [
+            GuidelineConflict(
+                topic=c.get("topic",""), guideline_a=c.get("a",""),
+                recommendation_a=c.get("rec_a",""), guideline_b=c.get("b",""),
+                recommendation_b=c.get("rec_b",""),
+                severity=ConflictSeverity(c.get("severity","moderate")),
+                resolution_strategy=c.get("resolution",""),
+                source_priority=c.get("source",""),
+            ) for c in raw.get("guideline_conflicts", [])
+        ]
 
     def find_conflicts(self, topic: str) -> list[GuidelineConflict]:
         """Find known guideline conflicts related to a topic."""
         topic_lower = topic.lower()
         return [
-            c for c in self.KNOWN_CONFLICTS
+            c for c in self._conflicts
             if any(kw in topic_lower for kw in c.topic.lower().split())
         ]
 
@@ -315,42 +267,17 @@ class ConceptDriftMonitor:
     """
 
     # Known concept drifts (documented in literature)
-    KNOWN_DRIFTS: list[dict] = [
-        {
-            "concept": "diabetes_diagnosis_threshold",
-            "old": "Fasting glucose >= 7.0 mmol/L only",
-            "new": "FG >= 7.0 OR HbA1c >= 48 mmol/mol (6.5%)",
-            "year": 2011,
-            "source": "WHO 2011; ADA 2010",
-        },
-        {
-            "concept": "hypertension_threshold_us",
-            "old": ">=140/90 mmHg",
-            "new": ">=130/80 mmHg",
-            "year": 2017,
-            "source": "AHA/ACC 2017 (JNC8 replaced)",
-        },
-        {
-            "concept": "ckd_classification",
-            "old": "CKD Stages 1-5",
-            "new": "CKD G1-G5 with A1-A3 albuminuria staging",
-            "year": 2012,
-            "source": "KDIGO 2012 (updated 2024)",
-        },
-        {
-            "concept": "sepsis_definition",
-            "old": "SIRS criteria + infection",
-            "new": "SOFA score >=2 + infection (Sepsis-3)",
-            "year": 2016,
-            "source": "Singer et al. JAMA 2016 (Sepsis-3)",
-        },
-    ]
+
+    def __init__(self):
+        from curaniq.data_loader import load_json_data
+        raw = load_json_data("curation_reference_data.json")
+        self.KNOWN_DRIFTS = raw.get("concept_drifts", [])
 
     def check_for_drift(self, concept: str) -> list[dict]:
         """Check if a concept has undergone definitional drift."""
         concept_lower = concept.lower()
         return [
-            drift for drift in self.KNOWN_DRIFTS
+            drift for drift in self._drifts
             if any(kw in concept_lower for kw in drift["concept"].split("_"))
         ]
 

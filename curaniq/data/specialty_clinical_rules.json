@@ -1,0 +1,195 @@
+{
+  "_metadata": {
+    "source": "NICE NG56; ASAM 2020; CDC ACIP 2024; published clinical pharmacology",
+    "version": "2024"
+  },
+  "multimorbidity_conflicts": [
+    {
+      "cond_a": "heart_failure",
+      "drug": "nsaid",
+      "cond_b": "pain",
+      "conflict": "NSAIDs cause fluid retention, worsen HF",
+      "recommendation": "Use paracetamol. If NSAID essential: lowest dose, shortest duration.",
+      "source": "NICE NG106"
+    },
+    {
+      "cond_a": "asthma",
+      "drug": "beta_blocker_nonselective",
+      "cond_b": "hypertension",
+      "conflict": "Non-selective BB can trigger bronchospasm",
+      "recommendation": "Use cardioselective (bisoprolol). Avoid propranolol/carvedilol.",
+      "source": "BTS/SIGN 2019"
+    },
+    {
+      "cond_a": "ckd",
+      "drug": "nsaid",
+      "cond_b": "pain",
+      "conflict": "NSAIDs reduce renal blood flow, accelerate CKD",
+      "recommendation": "AVOID if eGFR <30. Max 5 days if 30-60.",
+      "source": "KDIGO 2024"
+    },
+    {
+      "cond_a": "diabetes",
+      "drug": "thiazide_high_dose",
+      "cond_b": "hypertension",
+      "conflict": "High-dose thiazides worsen glycemic control",
+      "recommendation": "Low-dose (HCTZ 12.5-25mg). Monitor HbA1c.",
+      "source": "ADA 2024"
+    },
+    {
+      "cond_a": "gout",
+      "drug": "thiazide",
+      "cond_b": "hypertension",
+      "conflict": "Thiazides increase uric acid",
+      "recommendation": "Add allopurinol. Consider losartan (uricosuric).",
+      "source": "ACR 2020"
+    },
+    {
+      "cond_a": "depression",
+      "drug": "beta_blocker_lipophilic",
+      "cond_b": "hypertension",
+      "conflict": "Lipophilic BB may worsen depression",
+      "recommendation": "Use hydrophilic (atenolol) or alternative class.",
+      "source": "NICE CG90"
+    },
+    {
+      "cond_a": "peptic_ulcer",
+      "drug": "anticoagulant",
+      "cond_b": "atrial_fibrillation",
+      "conflict": "Anticoagulation increases GI bleeding risk",
+      "recommendation": "PPI mandatory. H.pylori eradication. Prefer apixaban.",
+      "source": "ESC 2024"
+    },
+    {
+      "cond_a": "osteoporosis",
+      "drug": "corticosteroid",
+      "cond_b": "inflammation",
+      "conflict": "Corticosteroids accelerate bone loss",
+      "recommendation": "Calcium + VitD + bisphosphonate if >3 months.",
+      "source": "ACR 2022 GIOP"
+    },
+    {
+      "cond_a": "diabetes",
+      "drug": "corticosteroid",
+      "cond_b": "inflammation",
+      "conflict": "Corticosteroids cause hyperglycemia",
+      "recommendation": "Monitor glucose QID. May need insulin adjustment.",
+      "source": "JBDS-IP Steroid Diabetes 2021"
+    }
+  ],
+  "substance_use_combinations": [
+    {
+      "drug_a": "methadone",
+      "drug_b_class": "benzodiazepine",
+      "severity": "critical",
+      "message": "Respiratory depression. FDA boxed warning.",
+      "source": "FDA 2017"
+    },
+    {
+      "drug_a": "buprenorphine",
+      "drug_b_class": "benzodiazepine",
+      "severity": "major",
+      "message": "Increased sedation + respiratory depression.",
+      "source": "FDA 2017"
+    },
+    {
+      "drug_a": "methadone",
+      "drug_b_class": "qt_prolonging",
+      "severity": "major",
+      "message": "QT prolongation + CYP3A4 interaction.",
+      "source": "SAMHSA TIP 63"
+    },
+    {
+      "drug_a": "disulfiram",
+      "drug_b_class": "metronidazole",
+      "severity": "major",
+      "message": "Psychotic reactions. Avoid.",
+      "source": "Product labels"
+    },
+    {
+      "drug_a": "naltrexone",
+      "drug_b_class": "opioid",
+      "severity": "critical",
+      "message": "Precipitated withdrawal. 7-10d opioid-free required.",
+      "source": "ASAM 2020"
+    },
+    {
+      "drug_a": "buprenorphine",
+      "drug_b_class": "full_agonist_opioid",
+      "severity": "critical",
+      "message": "Precipitated withdrawal if agonist still active. COWS >=12.",
+      "source": "ASAM 2020"
+    }
+  ],
+  "temporal_safety_rules": [
+    {
+      "drug_a": "methotrexate",
+      "drug_b": "nsaid_high_dose",
+      "min_gap_hours": 24,
+      "direction": "either",
+      "reason": "NSAIDs reduce MTX clearance, toxicity risk",
+      "source": "FDA label"
+    },
+    {
+      "drug_a": "fluoxetine",
+      "drug_b": "maoi",
+      "min_gap_hours": 840,
+      "direction": "a_before_b",
+      "reason": "Norfluoxetine t1/2 up to 16 days. 5 half-lives = 35 days",
+      "source": "Stahl's"
+    },
+    {
+      "drug_a": "maoi",
+      "drug_b": "ssri",
+      "min_gap_hours": 336,
+      "direction": "a_before_b",
+      "reason": "MAO regeneration ~14 days",
+      "source": "APA 2023"
+    },
+    {
+      "drug_a": "vancomycin_dose",
+      "drug_b": "vancomycin_level",
+      "min_gap_hours": 0,
+      "direction": "a_before_b",
+      "reason": "Trough before next dose (within 30min)",
+      "source": "IDSA/ASHP 2020"
+    },
+    {
+      "drug_a": "bisphosphonate",
+      "drug_b": "calcium_supplement",
+      "min_gap_hours": 2,
+      "direction": "a_before_b",
+      "reason": "Calcium reduces bisphosphonate absorption",
+      "source": "BNF; NICE TA464"
+    }
+  ],
+  "vaccination": {
+    "live_vaccines": [
+      "mmr",
+      "varicella",
+      "bcg",
+      "rotavirus",
+      "yellow_fever",
+      "oral_polio",
+      "live_influenza",
+      "oral_typhoid",
+      "dengue"
+    ],
+    "immunosuppressive_drugs": [
+      "methotrexate",
+      "azathioprine",
+      "cyclophosphamide",
+      "mycophenolate",
+      "tacrolimus",
+      "cyclosporine",
+      "rituximab",
+      "adalimumab",
+      "infliximab",
+      "etanercept",
+      "prednisone_high",
+      "tofacitinib",
+      "baricitinib"
+    ],
+    "source": "CDC ACIP General Best Practices 2024; Green Book Ch 6"
+  }
+}

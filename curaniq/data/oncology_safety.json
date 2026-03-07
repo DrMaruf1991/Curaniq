@@ -1,0 +1,78 @@
+{
+  "_metadata": {
+    "source": "NCCN Antiemesis v1.2024; drug labels; ASCO guidelines",
+    "version": "2024",
+    "total_entries": 31
+  },
+  "emetogenicity": {
+    "cisplatin": "high",
+    "cyclophosphamide_high": "high",
+    "doxorubicin": "high",
+    "epirubicin": "high",
+    "ifosfamide": "high",
+    "dacarbazine": "high",
+    "streptozocin": "high",
+    "mechlorethamine": "high",
+    "carboplatin": "moderate",
+    "oxaliplatin": "moderate",
+    "irinotecan": "moderate",
+    "temozolomide": "moderate",
+    "daunorubicin": "moderate",
+    "cyclophosphamide_low": "moderate",
+    "bendamustine": "moderate",
+    "paclitaxel": "low",
+    "docetaxel": "low",
+    "5-fluorouracil": "low",
+    "gemcitabine": "low",
+    "etoposide": "low",
+    "methotrexate": "low",
+    "mitoxantrone": "low",
+    "pemetrexed": "low",
+    "vincristine": "minimal",
+    "vinblastine": "minimal",
+    "bleomycin": "minimal",
+    "rituximab": "minimal",
+    "trastuzumab": "minimal",
+    "bevacizumab": "minimal",
+    "nivolumab": "minimal",
+    "pembrolizumab": "minimal"
+  },
+  "cumulative_limits": {
+    "doxorubicin": {
+      "max_mg_m2": 450,
+      "toxicity": "Cardiotoxicity (CHF)",
+      "monitoring": "ECHO/MUGA after 300mg/m2",
+      "source": "NCCN; FDA"
+    },
+    "epirubicin": {
+      "max_mg_m2": 900,
+      "toxicity": "Cardiotoxicity",
+      "monitoring": "ECHO periodically",
+      "source": "FDA"
+    },
+    "daunorubicin": {
+      "max_mg_m2": 550,
+      "toxicity": "Cardiotoxicity",
+      "monitoring": "ECHO/MUGA",
+      "source": "FDA"
+    },
+    "bleomycin": {
+      "max_units": 400,
+      "toxicity": "Pulmonary fibrosis",
+      "monitoring": "PFTs. DLCO <40% = stop",
+      "source": "FDA"
+    },
+    "mitoxantrone": {
+      "max_mg_m2": 140,
+      "toxicity": "Cardiotoxicity",
+      "monitoring": "ECHO before each cycle",
+      "source": "FDA"
+    }
+  },
+  "antiemetic_protocols": {
+    "high": "NK1 + 5-HT3 + dexamethasone + olanzapine",
+    "moderate": "5-HT3 + dexamethasone",
+    "low": "Dexamethasone OR 5-HT3",
+    "minimal": "None routinely; PRN only"
+  }
+}

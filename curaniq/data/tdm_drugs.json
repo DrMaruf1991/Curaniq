@@ -1,0 +1,177 @@
+{
+  "_metadata": {
+    "source": "IDSA/ASHP 2020; Winter's Clinical PK; drug labels",
+    "version": "2024",
+    "total_entries": 12
+  },
+  "drugs": {
+    "vancomycin": {
+      "trough_min": 15.0,
+      "trough_max": 20.0,
+      "toxic": 40.0,
+      "half_life_h": [
+        4,
+        11
+      ],
+      "protein_binding": 55,
+      "renal_clearance_pct": 90,
+      "dialyzable": true,
+      "monitoring": "AUC/MIC 400-600 preferred",
+      "source": "IDSA/ASHP 2020"
+    },
+    "gentamicin": {
+      "trough_min": 0.5,
+      "trough_max": 2.0,
+      "toxic": 12.0,
+      "half_life_h": [
+        2,
+        3
+      ],
+      "protein_binding": 30,
+      "renal_clearance_pct": 95,
+      "dialyzable": true,
+      "monitoring": "Trough <1 (extended interval)",
+      "source": "Sanford 2024"
+    },
+    "tobramycin": {
+      "trough_min": 0.5,
+      "trough_max": 2.0,
+      "toxic": 12.0,
+      "half_life_h": [
+        2,
+        3
+      ],
+      "protein_binding": 30,
+      "renal_clearance_pct": 95,
+      "dialyzable": true,
+      "monitoring": "Trough <1",
+      "source": "Sanford 2024"
+    },
+    "amikacin": {
+      "trough_min": 1.0,
+      "trough_max": 8.0,
+      "toxic": 35.0,
+      "half_life_h": [
+        2,
+        3
+      ],
+      "protein_binding": 4,
+      "renal_clearance_pct": 95,
+      "dialyzable": true,
+      "monitoring": "Peak 20-35, trough <5",
+      "source": "Sanford 2024"
+    },
+    "lithium": {
+      "trough_min": 0.6,
+      "trough_max": 1.0,
+      "toxic": 1.5,
+      "half_life_h": [
+        18,
+        36
+      ],
+      "protein_binding": 0,
+      "renal_clearance_pct": 95,
+      "dialyzable": true,
+      "monitoring": "12h post-dose. Weekly titration, then q3-6mo",
+      "source": "NICE CG185; BAP 2016"
+    },
+    "digoxin": {
+      "trough_min": 0.5,
+      "trough_max": 0.9,
+      "toxic": 2.0,
+      "half_life_h": [
+        36,
+        48
+      ],
+      "protein_binding": 25,
+      "renal_clearance_pct": 60,
+      "dialyzable": false,
+      "monitoring": ">=6h post-dose. Target 0.5-0.9 in HF",
+      "source": "NICE NG106; DIG trial"
+    },
+    "phenytoin": {
+      "trough_min": 10.0,
+      "trough_max": 20.0,
+      "toxic": 30.0,
+      "half_life_h": [
+        12,
+        36
+      ],
+      "protein_binding": 90,
+      "renal_clearance_pct": 5,
+      "dialyzable": false,
+      "monitoring": "Free level 1-2 if low albumin/renal failure",
+      "source": "NICE NG217; Winter's PK"
+    },
+    "carbamazepine": {
+      "trough_min": 4.0,
+      "trough_max": 12.0,
+      "toxic": 15.0,
+      "half_life_h": [
+        12,
+        17
+      ],
+      "protein_binding": 75,
+      "renal_clearance_pct": 3,
+      "dialyzable": false,
+      "monitoring": "Auto-induction: repeat 2-4wk after dose change",
+      "source": "NICE NG217"
+    },
+    "valproic_acid": {
+      "trough_min": 50.0,
+      "trough_max": 100.0,
+      "toxic": 150.0,
+      "half_life_h": [
+        8,
+        20
+      ],
+      "protein_binding": 90,
+      "renal_clearance_pct": 3,
+      "dialyzable": false,
+      "monitoring": "Free level if albumin low or total >100",
+      "source": "NICE NG217"
+    },
+    "tacrolimus": {
+      "trough_min": 5.0,
+      "trough_max": 15.0,
+      "toxic": 20.0,
+      "half_life_h": [
+        8,
+        12
+      ],
+      "protein_binding": 99,
+      "renal_clearance_pct": 2,
+      "dialyzable": false,
+      "monitoring": "C0 trough. Target varies by transplant type",
+      "source": "KDIGO Transplant 2009"
+    },
+    "cyclosporine": {
+      "trough_min": 100.0,
+      "trough_max": 300.0,
+      "toxic": 400.0,
+      "half_life_h": [
+        6,
+        12
+      ],
+      "protein_binding": 98,
+      "renal_clearance_pct": 6,
+      "dialyzable": false,
+      "monitoring": "C0 or C2 level",
+      "source": "KDIGO Transplant 2009"
+    },
+    "theophylline": {
+      "trough_min": 5.0,
+      "trough_max": 15.0,
+      "toxic": 20.0,
+      "half_life_h": [
+        6,
+        10
+      ],
+      "protein_binding": 40,
+      "renal_clearance_pct": 10,
+      "dialyzable": true,
+      "monitoring": "Levels affected by smoking, infection, CYP1A2",
+      "source": "BTS; GINA 2024"
+    }
+  }
+}

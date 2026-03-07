@@ -1,0 +1,183 @@
+{
+  "_metadata": {
+    "source": "ATC classification + Phase 1 validation scope",
+    "version": "2024",
+    "total_entries": 78
+  },
+  "validated_atc_prefixes": {
+    "A02": {
+      "status": "validated",
+      "desc": "Antacids, anti-ulcerants"
+    },
+    "A10": {
+      "status": "validated",
+      "desc": "Antidiabetics"
+    },
+    "B01": {
+      "status": "validated",
+      "desc": "Antithrombotics"
+    },
+    "C01": {
+      "status": "validated",
+      "desc": "Cardiac therapy"
+    },
+    "C02": {
+      "status": "validated",
+      "desc": "Antihypertensives"
+    },
+    "C03": {
+      "status": "validated",
+      "desc": "Diuretics"
+    },
+    "C07": {
+      "status": "validated",
+      "desc": "Beta-blockers"
+    },
+    "C08": {
+      "status": "validated",
+      "desc": "CCBs"
+    },
+    "C09": {
+      "status": "validated",
+      "desc": "ACEi/ARBs"
+    },
+    "C10": {
+      "status": "validated",
+      "desc": "Lipid modifying"
+    },
+    "G04": {
+      "status": "partial",
+      "desc": "Urologicals"
+    },
+    "H02": {
+      "status": "validated",
+      "desc": "Corticosteroids"
+    },
+    "J01": {
+      "status": "validated",
+      "desc": "Antibacterials"
+    },
+    "J05": {
+      "status": "partial",
+      "desc": "Antivirals"
+    },
+    "L01": {
+      "status": "partial",
+      "desc": "Antineoplastics (safety only)"
+    },
+    "M01": {
+      "status": "validated",
+      "desc": "NSAIDs"
+    },
+    "N02": {
+      "status": "validated",
+      "desc": "Analgesics"
+    },
+    "N03": {
+      "status": "validated",
+      "desc": "Antiepileptics"
+    },
+    "N05": {
+      "status": "validated",
+      "desc": "Psycholeptics"
+    },
+    "N06": {
+      "status": "validated",
+      "desc": "Psychoanaleptics"
+    },
+    "R03": {
+      "status": "validated",
+      "desc": "Obstructive airway"
+    },
+    "R06": {
+      "status": "validated",
+      "desc": "Antihistamines"
+    }
+  },
+  "drug_atc_map": {
+    "metformin": "A10",
+    "empagliflozin": "A10",
+    "semaglutide": "A10",
+    "insulin": "A10",
+    "gliclazide": "A10",
+    "sitagliptin": "A10",
+    "dapagliflozin": "A10",
+    "warfarin": "B01",
+    "heparin": "B01",
+    "enoxaparin": "B01",
+    "rivaroxaban": "B01",
+    "apixaban": "B01",
+    "dabigatran": "B01",
+    "aspirin": "B01",
+    "clopidogrel": "B01",
+    "edoxaban": "B01",
+    "amlodipine": "C08",
+    "lisinopril": "C09",
+    "enalapril": "C09",
+    "ramipril": "C09",
+    "valsartan": "C09",
+    "losartan": "C09",
+    "candesartan": "C09",
+    "atorvastatin": "C10",
+    "rosuvastatin": "C10",
+    "simvastatin": "C10",
+    "bisoprolol": "C07",
+    "metoprolol": "C07",
+    "carvedilol": "C07",
+    "atenolol": "C07",
+    "furosemide": "C03",
+    "hydrochlorothiazide": "C03",
+    "spironolactone": "C03",
+    "indapamide": "C03",
+    "digoxin": "C01",
+    "amiodarone": "C01",
+    "amoxicillin": "J01",
+    "azithromycin": "J01",
+    "ciprofloxacin": "J01",
+    "vancomycin": "J01",
+    "gentamicin": "J01",
+    "meropenem": "J01",
+    "doxycycline": "J01",
+    "metronidazole": "J01",
+    "ceftriaxone": "J01",
+    "fluconazole": "J02",
+    "ibuprofen": "M01",
+    "naproxen": "M01",
+    "diclofenac": "M01",
+    "celecoxib": "M01",
+    "acetaminophen": "N02",
+    "paracetamol": "N02",
+    "tramadol": "N02",
+    "morphine": "N02",
+    "codeine": "N02",
+    "fluoxetine": "N06",
+    "sertraline": "N06",
+    "escitalopram": "N06",
+    "venlafaxine": "N06",
+    "duloxetine": "N06",
+    "lithium": "N05",
+    "valproic acid": "N03",
+    "carbamazepine": "N03",
+    "phenytoin": "N03",
+    "pregabalin": "N03",
+    "gabapentin": "N03",
+    "levetiracetam": "N03",
+    "lamotrigine": "N03",
+    "prednisolone": "H02",
+    "dexamethasone": "H02",
+    "hydrocortisone": "H02",
+    "salbutamol": "R03",
+    "budesonide": "R03",
+    "tiotropium": "R03",
+    "omeprazole": "A02",
+    "pantoprazole": "A02",
+    "esomeprazole": "A02",
+    "lansoprazole": "A02"
+  },
+  "out_of_scope_patterns": [
+    "veterinary|animal|canine|feline",
+    "compounding|compounded|magistral",
+    "investigational|experimental|pre-?approval",
+    "homeopath|naturopath|ayurved"
+  ]
+}

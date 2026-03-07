@@ -1,0 +1,66 @@
+{
+  "_metadata": {
+    "source": "Boyer NEJM 2005; Stahl's Psychopharmacology 5th ed; APA 2023",
+    "version": "2024",
+    "total_entries": 31
+  },
+  "serotonergic_drugs": {
+    "fluoxetine": "ssri",
+    "sertraline": "ssri",
+    "paroxetine": "ssri",
+    "citalopram": "ssri",
+    "escitalopram": "ssri",
+    "fluvoxamine": "ssri",
+    "venlafaxine": "snri",
+    "duloxetine": "snri",
+    "desvenlafaxine": "snri",
+    "milnacipran": "snri",
+    "tramadol": "opioid_serotonergic",
+    "fentanyl": "opioid_serotonergic",
+    "meperidine": "opioid_serotonergic",
+    "tapentadol": "opioid_serotonergic",
+    "trazodone": "sari",
+    "mirtazapine": "nassa",
+    "bupropion": "ndri",
+    "linezolid": "maoi_reversible",
+    "methylene_blue": "maoi_reversible",
+    "phenelzine": "maoi_irreversible",
+    "tranylcypromine": "maoi_irreversible",
+    "isocarboxazid": "maoi_irreversible",
+    "selegiline": "maoi_b",
+    "rasagiline": "maoi_b",
+    "moclobemide": "maoi_reversible",
+    "st_johns_wort": "herbal_serotonergic",
+    "lithium": "lithium_serotonergic",
+    "dextromethorphan": "opioid_serotonergic",
+    "amitriptyline": "tca_serotonergic",
+    "clomipramine": "tca_serotonergic",
+    "imipramine": "tca_serotonergic"
+  },
+  "switch_washout_days": {
+    "fluoxetine_to_maoi": {
+      "days": 35,
+      "reason": "Norfluoxetine t1/2 = 4-16 days"
+    },
+    "maoi_to_ssri": {
+      "days": 14,
+      "reason": "MAO enzyme regeneration ~14 days"
+    },
+    "ssri_to_maoi": {
+      "days": 14,
+      "reason": "Standard 5 half-lives + safety margin"
+    },
+    "fluoxetine_to_ssri": {
+      "days": 7,
+      "reason": "Long t1/2; cross-taper risky"
+    },
+    "venlafaxine_to_maoi": {
+      "days": 7,
+      "reason": "Venlafaxine t1/2 ~5h, metabolite ~11h"
+    },
+    "clomipramine_to_ssri": {
+      "days": 21,
+      "reason": "Clomipramine t1/2 ~19-37h + serotonergic TCA"
+    }
+  }
+}

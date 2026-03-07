@@ -155,15 +155,15 @@ class OncologyChemoSafetyEngine:
 
     # Emetogenicity classification — NCCN Antiemesis v1.2024
     EMETOGENICITY: dict[str, EmetogenicRisk] = {
-        "cisplatin": EmetogenicRisk.HIGH, "cyclophosphamide_high": EmetogenicRisk.HIGH,
-        "doxorubicin": EmetogenicRisk.HIGH, "epirubicin": EmetogenicRisk.HIGH,
-        "ifosfamide": EmetogenicRisk.HIGH, "dacarbazine": EmetogenicRisk.HIGH,
-        "carboplatin": EmetogenicRisk.MODERATE, "oxaliplatin": EmetogenicRisk.MODERATE,
-        "irinotecan": EmetogenicRisk.MODERATE, "temozolomide": EmetogenicRisk.MODERATE,
-        "paclitaxel": EmetogenicRisk.LOW, "docetaxel": EmetogenicRisk.LOW,
-        "5-fluorouracil": EmetogenicRisk.LOW, "gemcitabine": EmetogenicRisk.LOW,
-        "vincristine": EmetogenicRisk.MINIMAL, "bleomycin": EmetogenicRisk.MINIMAL,
-        "rituximab": EmetogenicRisk.MINIMAL, "trastuzumab": EmetogenicRisk.MINIMAL,
+        "cisplatin": "high", "cyclophosphamide_high": "high",
+        "doxorubicin": "high", "epirubicin": "high",
+        "ifosfamide": "high", "dacarbazine": "high",
+        "carboplatin": "moderate", "oxaliplatin": "moderate",
+        "irinotecan": "moderate", "temozolomide": "moderate",
+        "paclitaxel": "low", "docetaxel": "low",
+        "5-fluorouracil": "low", "gemcitabine": "low",
+        "vincristine": "minimal", "bleomycin": "minimal",
+        "rituximab": "minimal", "trastuzumab": "minimal",
     }
 
     # Cumulative dose limits — Source: respective drug labels, NCCN guidelines
@@ -191,18 +191,18 @@ class OncologyChemoSafetyEngine:
             result.bsa_dose_calculated = f"BSA = {bsa} m2 (DuBois)"
 
         # Emetogenicity
-        emet = self.EMETOGENICITY.get(drug_lower)
+        emet = self._emetogenicity.get(drug_lower)
         if emet:
             result.emetogenic_risk = emet
-            if emet == EmetogenicRisk.HIGH:
+            if emet == "high":
                 result.antiemetic_protocol = "NK1 antagonist + 5-HT3 antagonist + dexamethasone + olanzapine (NCCN v1.2024)"
-            elif emet == EmetogenicRisk.MODERATE:
+            elif emet == "moderate":
                 result.antiemetic_protocol = "5-HT3 antagonist + dexamethasone (NCCN v1.2024)"
-            elif emet == EmetogenicRisk.LOW:
+            elif emet == "low":
                 result.antiemetic_protocol = "Dexamethasone OR 5-HT3 antagonist (NCCN v1.2024)"
 
         # Cumulative dose limits
-        limits = self.CUMULATIVE_LIMITS.get(drug_lower)
+        limits = self._cumulative_limits.get(drug_lower)
         if limits:
             max_val = limits.get("max_mg_m2", 0)
             if max_val and cumulative_dose_mg_m2 >= max_val * 0.8:
@@ -275,7 +275,7 @@ class PsychiatricSafetyEngine:
 
         for drug in drugs:
             drug_lower = drug.lower().strip().replace(" ", "_").replace("'", "")
-            sero_class = self.SEROTONERGIC_DRUGS.get(drug_lower)
+            sero_class = self._serotonergic_drugs.get(drug_lower)
             if sero_class:
                 serotonergic_found.setdefault(sero_class, []).append(drug)
 
@@ -363,7 +363,7 @@ class SubstanceUseSafetyEngine:
         alerts = []
         drug_set = {d.lower().strip() for d in drugs}
 
-        for combo in self.DANGEROUS_COMBINATIONS:
+        for combo in self._combinations:
             if combo[0] in drug_set and any(
                 d in drug_set for d in drug_set
                 if combo[1] in d or d in combo[1]
@@ -396,29 +396,6 @@ class MultiMorbidityResolver:
     # Cross-disease contraindication rules
     # Format: (condition_A, treatment_for_A, condition_B, conflict, recommendation)
     # Source: NICE NG56; clinical pharmacology literature
-    CONFLICT_RULES: list[tuple[str, str, str, str, str]] = [
-        ("heart_failure", "nsaid", "pain",
-         "NSAIDs cause fluid retention and worsen heart failure (NYHA class increase)",
-         "Use paracetamol first. If NSAID essential: lowest dose, shortest duration, monitor weight/oedema daily. Source: NICE NG106"),
-        ("asthma", "beta_blocker_nonselective", "hypertension",
-         "Non-selective beta-blockers can trigger bronchospasm in asthma",
-         "Use cardioselective beta-blocker (bisoprolol) at lowest dose. Avoid propranolol, carvedilol, nadolol. Source: BTS/SIGN 2019"),
-        ("ckd", "nsaid", "pain",
-         "NSAIDs reduce renal blood flow, accelerate CKD progression, cause AKI",
-         "AVOID NSAIDs if eGFR <30. If eGFR 30-60: maximum 5 days with renal monitoring. Source: KDIGO 2024"),
-        ("diabetes", "thiazide_high_dose", "hypertension",
-         "High-dose thiazides worsen glycemic control and cause hypokalemia",
-         "Use low-dose thiazide (HCTZ 12.5-25mg). Monitor HbA1c and potassium. Consider ACEi/ARB first-line. Source: ADA 2024"),
-        ("gout", "thiazide", "hypertension",
-         "Thiazides increase uric acid levels and precipitate gout attacks",
-         "If thiazide necessary: add allopurinol prophylaxis. Consider losartan (uricosuric ARB). Source: ACR 2020 Gout"),
-        ("depression", "beta_blocker_lipophilic", "hypertension",
-         "Lipophilic beta-blockers (propranolol, metoprolol) may worsen depression",
-         "Use hydrophilic beta-blocker (atenolol) or alternative antihypertensive class. Source: NICE CG90"),
-        ("peptic_ulcer", "anticoagulant", "atrial_fibrillation",
-         "Anticoagulation increases GI bleeding risk in peptic ulcer disease",
-         "PPI co-prescription mandatory. H. pylori eradication. Prefer apixaban (lowest GI bleeding in ARISTOTLE). Source: ESC 2024"),
-    ]
 
     def check_conflicts(self, conditions: list[str], drugs: list[str]) -> list[dict]:
         """Check for multi-morbidity treatment conflicts."""
@@ -426,7 +403,12 @@ class MultiMorbidityResolver:
         cond_set = {c.lower().replace(" ", "_") for c in conditions}
         drug_set = {d.lower() for d in drugs}
 
-        for cond_a, treatment, cond_b, conflict_desc, recommendation in self.CONFLICT_RULES:
+        for rule in self._conflict_rules:
+            cond_a = rule.get("cond_a", "")
+            treatment = rule.get("drug", "")
+            cond_b = rule.get("cond_b", "")
+            conflict_desc = rule.get("conflict", "")
+            recommendation = rule.get("recommendation", "")
             if cond_a in cond_set and any(treatment in d or d in treatment for d in drug_set):
                 conflicts.append({
                     "condition_treated": cond_a,
@@ -464,19 +446,14 @@ class VaccinationEngine:
     - Minimum intervals between doses
     - Drug-vaccine interactions (immunosuppressants)
     """
-
-    LIVE_VACCINES: set[str] = {
-        "mmr", "varicella", "bcg", "rotavirus", "yellow_fever",
-        "oral_polio", "live_influenza", "oral_typhoid", "dengue",
-    }
-
-    # Immunosuppressive drugs that contraindicate live vaccines
-    # Source: CDC ACIP General Best Practices 2024; Green Book Ch 6
-    IMMUNOSUPPRESSIVE_DRUGS: set[str] = {
-        "methotrexate", "azathioprine", "cyclophosphamide", "mycophenolate",
-        "tacrolimus", "cyclosporine", "rituximab", "adalimumab", "infliximab",
-        "etanercept", "prednisone_high",  # >20mg/day for >=14 days
-    }
+    def __init__(self):
+        from curaniq.data_loader import load_json_data
+        raw = load_json_data("specialty_clinical_rules.json")
+        vax = raw.get("vaccination", {})
+        self._live_vaccines = set(vax.get("live_vaccines", []))
+        self._immunosuppressive = set(vax.get("immunosuppressive_drugs", []))
+        logger.info("VaccinationEngine: %d live vaccines, %d immunosuppressants",
+                     len(self._live_vaccines), len(self._immunosuppressive))
 
     def check_vaccine(self, vaccine: str, patient_drugs: list[str],
                       is_pregnant: bool = False,
@@ -492,7 +469,7 @@ class VaccinationEngine:
             )
             return result
 
-        is_live = vaccine_lower in self.LIVE_VACCINES
+        is_live = vaccine_lower in self._live_vaccines
 
         if is_live:
             # Pregnancy check
@@ -505,7 +482,7 @@ class VaccinationEngine:
 
             # Immunosuppression check
             patient_drug_set = {d.lower().strip() for d in patient_drugs}
-            immuno_drugs = patient_drug_set & self.IMMUNOSUPPRESSIVE_DRUGS
+            immuno_drugs = patient_drug_set & self._immunosuppressive
             if immuno_drugs:
                 result.safe_to_administer = False
                 result.contraindications.append(
@@ -624,7 +601,7 @@ class TemporalLogicVerifier:
         violations = []
         sorted_events = sorted(events, key=lambda e: e.get("time_hours", 0))
 
-        for rule in self.SEQUENCE_RULES:
+        for rule in self._sequence_rules:
             drug_a, drug_b, min_gap, direction, reason = rule
             a_times = [e["time_hours"] for e in sorted_events if drug_a in e.get("drug", "").lower()]
             b_times = [e["time_hours"] for e in sorted_events if drug_b in e.get("drug", "").lower()]
