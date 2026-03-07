@@ -1,0 +1,265 @@
+{
+  "_metadata": {
+    "source": "CPIC Guidelines 2024; PharmGKB; FDA Table of Pharmacogenomic Biomarkers",
+    "url": "https://cpicpgx.org/guidelines/; https://www.pharmgkb.org/",
+    "version": "2024",
+    "total_entries": 27
+  },
+  "gene_drug_pairs": {
+    "CYP2D6": {
+      "description": "Cytochrome P450 2D6 — metabolizes ~25% of drugs",
+      "phenotypes": [
+        "poor_metabolizer",
+        "intermediate_metabolizer",
+        "normal_metabolizer",
+        "rapid_metabolizer",
+        "ultrarapid_metabolizer"
+      ],
+      "drugs": {
+        "codeine": {
+          "action_pm": "AVOID. No analgesic effect (cannot convert to morphine).",
+          "action_um": "AVOID. Excessive morphine formation, respiratory depression risk.",
+          "action_normal": "Standard dosing.",
+          "cpic_level": "A",
+          "source": "CPIC Codeine 2019; FDA BoxWarning"
+        },
+        "tramadol": {
+          "action_pm": "AVOID or use alternative. Reduced efficacy.",
+          "action_um": "AVOID. Excessive O-desmethyltramadol, toxicity risk.",
+          "action_normal": "Standard dosing.",
+          "cpic_level": "A",
+          "source": "CPIC Codeine 2019 (extrapolated)"
+        },
+        "tamoxifen": {
+          "action_pm": "Consider aromatase inhibitor instead. Reduced endoxifen formation.",
+          "action_um": "Standard dosing.",
+          "action_normal": "Standard dosing.",
+          "cpic_level": "A",
+          "source": "CPIC Tamoxifen 2018; DPWG"
+        },
+        "ondansetron": {
+          "action_pm": "Standard dosing (minor pathway).",
+          "action_um": "Reduced efficacy possible. Consider granisetron.",
+          "action_normal": "Standard dosing.",
+          "cpic_level": "B",
+          "source": "CPIC Ondansetron 2023"
+        },
+        "fluoxetine": {
+          "action_pm": "Consider 50% dose reduction or alternative SSRI.",
+          "action_um": "Consider dose increase or alternative.",
+          "action_normal": "Standard dosing.",
+          "cpic_level": "A",
+          "source": "CPIC SSRI 2023"
+        },
+        "paroxetine": {
+          "action_pm": "AVOID. Use alternative SSRI (sertraline, escitalopram).",
+          "action_um": "Consider dose increase.",
+          "action_normal": "Standard dosing.",
+          "cpic_level": "A",
+          "source": "CPIC SSRI 2023"
+        },
+        "nortriptyline": {
+          "action_pm": "Reduce dose 50%. Monitor levels.",
+          "action_um": "Increase dose. Monitor levels.",
+          "action_normal": "Standard dosing.",
+          "cpic_level": "A",
+          "source": "CPIC TCA 2016"
+        },
+        "amitriptyline": {
+          "action_pm": "AVOID or reduce dose 50%. Consider alternative.",
+          "action_um": "Increase dose. Monitor levels.",
+          "action_normal": "Standard dosing.",
+          "cpic_level": "A",
+          "source": "CPIC TCA 2016"
+        },
+        "metoprolol": {
+          "action_pm": "Consider 75% dose reduction or use bisoprolol (not CYP2D6).",
+          "action_um": "Standard or higher dose may be needed.",
+          "action_normal": "Standard dosing.",
+          "cpic_level": "B",
+          "source": "DPWG; PharmGKB"
+        },
+        "risperidone": {
+          "action_pm": "Reduce dose. Monitor for EPS.",
+          "action_um": "May need higher dose.",
+          "action_normal": "Standard dosing.",
+          "cpic_level": "B",
+          "source": "CPIC 2024 draft; DPWG"
+        },
+        "haloperidol": {
+          "action_pm": "Reduce dose 50%. High EPS risk.",
+          "action_um": "May need higher dose.",
+          "action_normal": "Standard dosing.",
+          "cpic_level": "B",
+          "source": "DPWG"
+        }
+      }
+    },
+    "CYP2C19": {
+      "description": "Cytochrome P450 2C19 — PPIs, clopidogrel, voriconazole",
+      "phenotypes": [
+        "poor_metabolizer",
+        "intermediate_metabolizer",
+        "normal_metabolizer",
+        "rapid_metabolizer",
+        "ultrarapid_metabolizer"
+      ],
+      "drugs": {
+        "clopidogrel": {
+          "action_pm": "AVOID. Use prasugrel or ticagrelor instead.",
+          "action_um": "Standard dosing.",
+          "action_normal": "Standard dosing.",
+          "cpic_level": "A",
+          "source": "CPIC Clopidogrel 2022; FDA BoxWarning"
+        },
+        "voriconazole": {
+          "action_pm": "Standard dosing (paradoxically higher levels).",
+          "action_um": "Increase dose or use alternative antifungal.",
+          "action_normal": "Standard dosing.",
+          "cpic_level": "A",
+          "source": "CPIC Voriconazole 2016"
+        },
+        "omeprazole": {
+          "action_pm": "Reduce dose 50%. Increased exposure.",
+          "action_um": "Increase dose 2-3x for H.pylori. Standard for GORD.",
+          "action_normal": "Standard dosing.",
+          "cpic_level": "B",
+          "source": "CPIC PPI 2020"
+        },
+        "pantoprazole": {
+          "action_pm": "Consider lower dose.",
+          "action_um": "Consider higher dose for H.pylori.",
+          "action_normal": "Standard dosing.",
+          "cpic_level": "B",
+          "source": "CPIC PPI 2020"
+        },
+        "escitalopram": {
+          "action_pm": "Reduce dose 50%.",
+          "action_um": "Consider alternative or dose increase.",
+          "action_normal": "Standard dosing.",
+          "cpic_level": "A",
+          "source": "CPIC SSRI 2023"
+        },
+        "sertraline": {
+          "action_pm": "Reduce dose 50%.",
+          "action_um": "Consider alternative.",
+          "action_normal": "Standard dosing.",
+          "cpic_level": "A",
+          "source": "CPIC SSRI 2023"
+        }
+      }
+    },
+    "CYP2C9": {
+      "description": "Cytochrome P450 2C9 — warfarin, phenytoin, NSAIDs",
+      "phenotypes": [
+        "poor_metabolizer",
+        "intermediate_metabolizer",
+        "normal_metabolizer"
+      ],
+      "drugs": {
+        "warfarin": {
+          "action_pm": "Reduce initial dose 50-80%. Use PGx-guided dosing algorithm.",
+          "action_normal": "Standard 5mg initiation.",
+          "cpic_level": "A",
+          "source": "CPIC Warfarin 2017; IWPC algorithm"
+        },
+        "phenytoin": {
+          "action_pm": "Reduce dose 25-50%. Monitor levels closely.",
+          "action_normal": "Standard dosing.",
+          "cpic_level": "A",
+          "source": "CPIC Phenytoin 2020"
+        },
+        "celecoxib": {
+          "action_pm": "Reduce dose 50%.",
+          "action_normal": "Standard dosing.",
+          "cpic_level": "B",
+          "source": "CPIC NSAIDs 2020"
+        }
+      }
+    },
+    "HLA-B*5701": {
+      "description": "HLA allele — abacavir hypersensitivity",
+      "phenotypes": [
+        "positive",
+        "negative"
+      ],
+      "drugs": {
+        "abacavir": {
+          "action_positive": "CONTRAINDICATED. Do NOT prescribe. Life-threatening hypersensitivity.",
+          "action_negative": "Safe to use.",
+          "cpic_level": "A",
+          "source": "CPIC Abacavir 2014; FDA required testing"
+        }
+      }
+    },
+    "HLA-B*1502": {
+      "description": "HLA allele — carbamazepine SJS/TEN (Southeast Asian ancestry)",
+      "phenotypes": [
+        "positive",
+        "negative"
+      ],
+      "drugs": {
+        "carbamazepine": {
+          "action_positive": "CONTRAINDICATED. SJS/TEN risk. Use alternative.",
+          "action_negative": "Standard dosing.",
+          "cpic_level": "A",
+          "source": "CPIC Carbamazepine 2013; FDA BoxWarning"
+        },
+        "oxcarbazepine": {
+          "action_positive": "AVOID. Cross-reactivity risk.",
+          "action_negative": "Standard dosing.",
+          "cpic_level": "A",
+          "source": "CPIC Carbamazepine 2013"
+        }
+      }
+    },
+    "DPYD": {
+      "description": "Dihydropyrimidine dehydrogenase — fluoropyrimidine toxicity",
+      "phenotypes": [
+        "poor_metabolizer",
+        "intermediate_metabolizer",
+        "normal_metabolizer"
+      ],
+      "drugs": {
+        "fluorouracil": {
+          "action_pm": "CONTRAINDICATED. Fatal toxicity risk.",
+          "action_im": "Reduce dose 50%. Monitor closely.",
+          "action_normal": "Standard dosing.",
+          "cpic_level": "A",
+          "source": "CPIC Fluoropyrimidines 2023; EMA mandatory testing 2020"
+        },
+        "capecitabine": {
+          "action_pm": "CONTRAINDICATED. Fatal toxicity.",
+          "action_im": "Reduce dose 50%.",
+          "action_normal": "Standard dosing.",
+          "cpic_level": "A",
+          "source": "CPIC Fluoropyrimidines 2023"
+        }
+      }
+    },
+    "TPMT_NUDT15": {
+      "description": "Thiopurine methyltransferase / NUDT15 — thiopurine toxicity",
+      "phenotypes": [
+        "poor_metabolizer",
+        "intermediate_metabolizer",
+        "normal_metabolizer"
+      ],
+      "drugs": {
+        "azathioprine": {
+          "action_pm": "Reduce dose 90% or AVOID.",
+          "action_im": "Reduce dose 30-80%.",
+          "action_normal": "Standard dosing.",
+          "cpic_level": "A",
+          "source": "CPIC Thiopurines 2018"
+        },
+        "mercaptopurine": {
+          "action_pm": "Reduce dose 90% or AVOID.",
+          "action_im": "Reduce dose 30-80%.",
+          "action_normal": "Standard dosing.",
+          "cpic_level": "A",
+          "source": "CPIC Thiopurines 2018"
+        }
+      }
+    }
+  }
+}

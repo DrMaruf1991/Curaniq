@@ -244,29 +244,6 @@ class PsychiatricSafetyEngine:
     - Lithium-specific safety (from L3-18 TDM data)
     """
 
-    # Serotonin syndrome risk combinations
-    # Source: Boyer & Shannon, NEJM 2005; Hunter Serotonin Toxicity Criteria
-    SEROTONERGIC_DRUGS: dict[str, str] = {
-        "fluoxetine": "ssri", "sertraline": "ssri", "paroxetine": "ssri",
-        "citalopram": "ssri", "escitalopram": "ssri", "fluvoxamine": "ssri",
-        "venlafaxine": "snri", "duloxetine": "snri", "desvenlafaxine": "snri",
-        "tramadol": "opioid_serotonergic", "fentanyl": "opioid_serotonergic",
-        "trazodone": "sari", "mirtazapine": "nassa",
-        "linezolid": "maoi_reversible", "methylene_blue": "maoi_reversible",
-        "phenelzine": "maoi_irreversible", "tranylcypromine": "maoi_irreversible",
-        "selegiline": "maoi_b", "moclobemide": "maoi_reversible",
-        "st_johns_wort": "herbal_serotonergic",
-        "lithium": "lithium_serotonergic",
-    }
-
-    # MAOI washout requirements before starting new serotonergic
-    # Source: Stahl's Essential Psychopharmacology, 5th ed
-    SWITCH_WASHOUT_DAYS: dict[str, dict[str, int]] = {
-        "fluoxetine_to_maoi": {"washout_days": 35, "reason": "Norfluoxetine t1/2 = 4-16 days"},
-        "maoi_to_ssri": {"washout_days": 14, "reason": "MAOI enzyme regeneration ~14 days"},
-        "ssri_to_maoi": {"washout_days": 14, "reason": "Standard 5 half-lives + safety margin"},
-        "fluoxetine_to_ssri": {"washout_days": 7, "reason": "Long t1/2; direct switch to other SSRI risky"},
-    }
 
     def check_serotonin_syndrome_risk(self, drugs: list[str]) -> list[PsychSafetyAlert]:
         """Check drug combination for serotonin syndrome risk."""
@@ -580,18 +557,6 @@ class TemporalLogicVerifier:
     Uses event sequence checking (not full LTL model checking).
     """
 
-    # Temporal safety rules
-    # Format: (drug_A, drug_B, min_gap_hours, direction, reason)
-    SEQUENCE_RULES: list[tuple[str, str, float, str, str]] = [
-        ("methotrexate", "nsaid_high_dose", 24, "either_direction",
-         "NSAIDs reduce methotrexate clearance, increasing toxicity risk. Source: FDA label"),
-        ("fluoxetine", "maoi", 840, "a_before_b",  # 35 days = 840h
-         "Fluoxetine + active metabolite t1/2 = 4-16 days. 5 half-lives = 35 days. Source: Stahl's"),
-        ("maoi", "ssri", 336, "a_before_b",  # 14 days = 336h
-         "MAO enzyme regeneration requires ~14 days. Source: APA 2023"),
-        ("vancomycin_dose", "vancomycin_level", 0, "a_before_b",
-         "Trough level must be drawn BEFORE next dose (within 30min). Source: IDSA/ASHP 2020"),
-    ]
 
     def check_sequence(self, events: list[dict]) -> list[dict]:
         """

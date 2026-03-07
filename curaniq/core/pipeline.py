@@ -273,6 +273,25 @@ from curaniq.layers.L0_L11_L12_extensions.foundation_p2 import (
     EvidenceStrengthAdjuster,       # L12-11
 )
 
+# ── P3: L12 Research & Genomics + L13 Federated (13 modules) ──
+from curaniq.layers.L12_research.research_genomics import (
+    PharmacogenomicEngine,         # L12-1
+    GenomicResolver,               # L12-2
+    ChemicalStructureValidator,    # L12-3
+    VelocityTrendTracker,          # L12-4
+    NOf1TrialDesigner,             # L12-5
+    CounterfactualSimulator,       # L12-6
+    VisualDiffDetector,            # L12-7
+    AmbientAudioSentinel,          # L12-8
+    ClinicalTrialMatcher,          # L12-9
+)
+from curaniq.layers.L13_federated.federated_network import (
+    FederatedTruthNetwork,         # L13-1
+    FederatedHallucinationRegistry,# L13-2
+    FederatedSafetySignalNetwork,  # L13-3
+    RWEAggregationEngine,          # L13-4
+)
+
 # ── P2 CLUSTER 1: L3 Clinical Specialty Engines (12 modules) ──
 from curaniq.layers.L3_safety_kernel.geriatric_renal_anticoag_tdm import (
     GeriatricSafetyEngine,         # L3-8
@@ -709,6 +728,21 @@ class CURANIQPipeline:
         self.outcome_feedback = OutcomeFeedbackLoop()              # L12-10
         self.evidence_adjuster = EvidenceStrengthAdjuster()        # L12-11
 
+        # ── P3: L12 Research & Genomics + L13 Federated ──
+        self.pgx_engine = PharmacogenomicEngine()                  # L12-1
+        self.genomic_resolver = GenomicResolver()                  # L12-2
+        self.chem_validator = ChemicalStructureValidator()          # L12-3
+        self.velocity_tracker = VelocityTrendTracker()             # L12-4
+        self.nof1_designer = NOf1TrialDesigner()                   # L12-5
+        self.counterfactual_sim = CounterfactualSimulator()        # L12-6
+        self.imaging_diff = VisualDiffDetector()                   # L12-7
+        self.ambient_audio = AmbientAudioSentinel()                # L12-8
+        self.trial_matcher = ClinicalTrialMatcher()                # L12-9
+        self.truth_network = FederatedTruthNetwork()               # L13-1
+        self.hallucination_registry = FederatedHallucinationRegistry()  # L13-2
+        self.safety_signal_network = FederatedSafetySignalNetwork()    # L13-3
+        self.rwe_aggregation = RWEAggregationEngine()              # L13-4
+
     def process(self, query: ClinicalQuery) -> CURANIQResponse:
         """
         Execute the complete CURANIQ pipeline for a clinical query.
@@ -1130,6 +1164,17 @@ class CURANIQPipeline:
                 f"PREDICTIVE [{pa.probability}]: {pa.risk_description} — "
                 f"Horizon: {pa.time_horizon}. Action: {pa.recommended_action[:80]}"
             )
+
+        # L12-1: Pharmacogenomics Check (when genotype data available)
+        patient_genotypes = getattr(patient, 'genotypes', None) or {}
+        if patient_genotypes and drugs_mentioned:
+            for drug in drugs_mentioned:
+                pgx_recs = self.pgx_engine.check_drug(drug, patient_genotypes)
+                for rec in pgx_recs:
+                    specialty_alerts.append(
+                        f"PGx [{rec.cpic_level}]: {rec.gene}/{rec.phenotype} + {rec.drug} — "
+                        f"{rec.action[:100]}. Source: {rec.source[:50]}"
+                    )
 
         # L1-13: WHO Essential Medicines List check
         eml_status = self.who_eml.get_eml_status(drugs_mentioned)
