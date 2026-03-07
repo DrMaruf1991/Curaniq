@@ -596,7 +596,8 @@ class ConstrainedGenerator:
             return self._call_llm(query.raw_text, evidence_text, patient_text, mode)
         else:
             # Test/demo: return structured mock response based on evidence content
-            return self._mock_response(query, evidence_pack, cql_results), 0.85
+            # Mock mode: no real LLM → no cross-LLM agreement. Conservative baseline.
+            return self._mock_response(query, evidence_pack, cql_results), 0.50
 
     def _format_evidence_pack(self, pack: EvidencePack) -> str:
         lines = []
@@ -700,8 +701,10 @@ class ConstrainedGenerator:
                 0.0,
             )
 
-        # cross_llm_agreement: 0.85 default when no adversarial verifier yet.
-        # TODO: Wire L4-12 adversarial jury for real cross-LLM verification.
-        cross_llm_agreement = 0.85
+        # L4-12: Cross-LLM agreement score.
+        # When adversarial jury is wired at pipeline level (STAGE 8.5),
+        # this initial score is overridden by actual jury results.
+        # Base score reflects primary LLM confidence only (no verification).
+        cross_llm_agreement = 0.50  # Conservative: unverified = 0.50, not 0.85
 
         return response.text, cross_llm_agreement

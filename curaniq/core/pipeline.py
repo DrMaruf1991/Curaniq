@@ -18,6 +18,7 @@ Wires all components together in the correct sequence:
 from __future__ import annotations
 import re
 import time
+import asyncio
 from datetime import datetime, timezone
 from typing import Any, Optional
 from uuid import UUID, uuid4
@@ -337,7 +338,7 @@ class CURANIQPipeline:
         self.negative_registry      = NegativeEvidenceRegistry()
 
         # L4: Adversarial verification (L4-12 jury protocol)
-        self.adversarial_jury       = AdversarialLLMJury()
+        self.adversarial_jury       = AdversarialLLMJury.from_environment()
         self.l4_confidence_scorer   = L4ConfidenceScorer()
 
         # Load seed evidence for demo/dev
@@ -449,6 +450,48 @@ class CURANIQPipeline:
             evidence_pack=evidence_pack,
             cross_llm_agreement=cross_llm_agreement,
         )
+
+        # ═══════════════════════════════════════════════════════════════
+        # STAGE 8.5: L4-12 Adversarial LLM Cross-Verification (Jury)
+        # If OPENAI_API_KEY is set: GPT-4o critiques Claude's claims.
+        # If not set: claims proceed with base confidence (degraded).
+        # Jury NEVER generates — only critiques. Different failure modes
+        # = extremely low probability of correlated hallucination.
+        # ═══════════════════════════════════════════════════════════════
+        if self.adversarial_jury.is_enabled and claim_contract.atomic_claims:
+            try:
+                # Determine risk level from triage + claim types
+                query_risk = "high_risk" if triage.result == TriageResult.HIGH_RISK else "standard"
+                
+                # Run async jury in sync pipeline context
+                verified_claims = asyncio.get_event_loop().run_until_complete(
+                    self.adversarial_jury.verify_claims(
+                        claims=claim_contract.atomic_claims,
+                        evidence_pack=evidence_pack,
+                        query_risk_level=query_risk,
+                    )
+                )
+                claim_contract.atomic_claims = verified_claims
+                
+                # Update cross_llm_agreement from actual jury results
+                # Average agreement across all claims that were verified
+                agreement_scores = [
+                    1.0 if c.verifier_decision and c.verifier_decision.value == "faithful" else
+                    0.5 if c.verifier_decision else 0.85
+                    for c in verified_claims
+                    if c.verdict.value.startswith("pass")
+                ]
+                if agreement_scores:
+                    cross_llm_agreement = sum(agreement_scores) / len(agreement_scores)
+                    
+            except Exception as jury_err:
+                # Jury failure is NON-BLOCKING — claims proceed with base confidence
+                # This is the correct fail-open for verification (fail-closed is for safety gates)
+                import logging
+                logging.getLogger(__name__).warning(
+                    f"L4-12 jury failed (non-blocking): {jury_err}. "
+                    "Claims proceed with base confidence."
+                )
 
         # ═══════════════════════════════════════════════════════════════
         # STAGE 9: L5 Safety Gate Suite

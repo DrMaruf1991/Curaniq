@@ -1,3 +1,4 @@
+import logging
 """
 CURANIQ - Audit Storage Backend (L9-1)
 Pluggable, immutable, append-only audit storage.
@@ -23,6 +24,9 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import Optional
 from uuid import UUID
+
+logger = logging.getLogger(__name__)
+
 
 
 class AuditStorageBackend(ABC):
@@ -164,10 +168,13 @@ def get_storage_backend() -> AuditStorageBackend:
     elif backend_type == "jsonl":
         return JSONLFileBackend()
     elif backend_type == "postgresql":
-        # Future: return PostgreSQLBackend()
-        raise NotImplementedError(
-            "PostgreSQL audit backend not yet implemented. "
-            "Set CURANIQ_AUDIT_BACKEND=jsonl for file-based storage."
+        # PostgreSQL audit backend deferred until L0-7 Data Architecture module is built.
+        # Graceful fallback: use JSONL with a warning so deployments don't crash.
+        logger.warning(
+            "L9-1: CURANIQ_AUDIT_BACKEND=postgresql requested but not yet implemented. "
+            "Falling back to JSONL file backend. Audit integrity maintained. "
+            "PostgreSQL backend requires L0-7 Data Architecture (SQLAlchemy models + migrations)."
         )
+        return JSONLFileBackend()
     else:
         return JSONLFileBackend()

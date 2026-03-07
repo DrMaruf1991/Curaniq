@@ -111,8 +111,8 @@ class AdversarialLLMJury:
 
     def __init__(
         self,
-        primary_api_key: str,                    # Anthropic API key (for primary generation)
-        verifier_api_key: str,                   # OpenAI API key (for GPT-4o verification)
+        primary_api_key: Optional[str] = None,
+        verifier_api_key: Optional[str] = None,
         nli_endpoint: str = "http://localhost:8100/entailment",
         high_risk_flag_threshold: float = 0.30,  # >30% flagged → REFUSE
         verifier_model: str = "gpt-4o",
@@ -124,6 +124,35 @@ class AdversarialLLMJury:
         self.high_risk_flag_threshold = high_risk_flag_threshold
         self.verifier_model = verifier_model
         self.primary_model = primary_model
+        self._enabled = bool(self.verifier_api_key)
+        if not self._enabled:
+            logger.info("L4-12 AdversarialLLMJury: verifier API key not set — jury DISABLED (degraded mode)")
+
+    @classmethod
+    def from_environment(cls) -> "AdversarialLLMJury":
+        """
+        Construct from environment variables. Mirrors MultiLLMClient.from_environment().
+        
+        Env vars:
+          ANTHROPIC_API_KEY  — primary LLM (already used by MultiLLMClient)
+          OPENAI_API_KEY     — verifier LLM (GPT-4o)
+          CURANIQ_NLI_ENDPOINT — self-hosted NLI model (default: localhost:8100)
+          CURANIQ_JURY_THRESHOLD — high-risk flag threshold (default: 0.30)
+          CURANIQ_VERIFIER_MODEL — verifier model (default: gpt-4o)
+        """
+        import os
+        return cls(
+            primary_api_key=os.environ.get("ANTHROPIC_API_KEY"),
+            verifier_api_key=os.environ.get("OPENAI_API_KEY"),
+            nli_endpoint=os.environ.get("CURANIQ_NLI_ENDPOINT", "http://localhost:8100/entailment"),
+            high_risk_flag_threshold=float(os.environ.get("CURANIQ_JURY_THRESHOLD", "0.30")),
+            verifier_model=os.environ.get("CURANIQ_VERIFIER_MODEL", "gpt-4o"),
+        )
+
+    @property
+    def is_enabled(self) -> bool:
+        """True if verifier API key is configured and jury can run."""
+        return self._enabled
 
     async def verify_claims(
         self,
@@ -139,6 +168,11 @@ class AdversarialLLMJury:
         
         Returns updated claims list.
         """
+        # If jury is disabled (no verifier API key), return claims with base confidence
+        if not self._enabled:
+            logger.info("L4-12 jury SKIPPED — no verifier API key. Claims proceed with base confidence.")
+            return claims
+
         # Only verify claims that have initially passed L4-3
         claims_to_verify = [
             c for c in claims

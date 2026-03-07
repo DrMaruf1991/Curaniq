@@ -147,8 +147,8 @@ class LLMCostMonitor:
                             ))
                     except (json.JSONDecodeError, KeyError):
                         continue
-        except Exception:
-            pass
+        except Exception as e:
+            logger.warning(f"L10-10: Failed to load cost history from {self._log_path}: {e}")
 
     def check_budget(self) -> BudgetStatus:
         """Check current budget status. Called BEFORE every LLM call."""
@@ -223,8 +223,11 @@ class LLMCostMonitor:
             with open(self._log_path, "a", encoding="utf-8") as f:
                 f.write(json.dumps(record.__dict__) + "\n")
                 f.flush()
-        except Exception:
-            pass
+        except Exception as e:
+            logger.error(
+                f"L10-10: COST RECORD LOST — failed to persist to {self._log_path}: {e}. "
+                "Budget enforcement may be inaccurate. Record kept in memory only."
+            )
 
     def _current_month_cost(self) -> float:
         """Total spend for current month."""
