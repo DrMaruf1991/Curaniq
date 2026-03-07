@@ -1,0 +1,16 @@
+﻿__pycache__/
+*.pyc
+*.pyo
+.env
+curaniq_audit.jsonl
+fix_*.py
+verify_*.py
+# Root-level copies of modules (originals are in curaniq/layers/)
+audit_storage.py
+drug_availability.py
+evidence_retriever.py
+llm_client.py
+phi_scrubber.py
+prompt_defense.py
+session_memory.py
+universal_input.py
