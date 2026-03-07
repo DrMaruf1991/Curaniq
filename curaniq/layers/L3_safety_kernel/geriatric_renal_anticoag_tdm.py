@@ -51,118 +51,45 @@ class GeriatricSafetyEngine:
     L3-8: Geriatric-specific safety checks.
 
     Implements:
-    - AGS Beers Criteria 2023 (potentially inappropriate medications in older adults)
-    - STOPP/START v3 criteria (screening tool for prescribing in older adults)
+    - AGS Beers Criteria 2023 (loaded from curaniq/data/beers_criteria_2023.json)
     - Anticholinergic Burden Scale (ACB score)
-    - Falls risk assessment (CNS-active drugs, orthostatic drugs)
-    - Cognitive risk flagging (benzodiazepines, anticholinergics, Z-drugs)
+    - Falls risk flagging
+    - Cognitive risk flagging
 
-    Threshold: age >= 65 activates geriatric checks
+    All clinical data loaded from versioned JSON files — not hardcoded.
+    Threshold: age >= 65 activates geriatric checks.
     """
 
     GERIATRIC_AGE_THRESHOLD = 65
 
-    # AGS Beers 2023 — Potentially Inappropriate Medications
-    # Source: American Geriatrics Society 2023 Updated AGS Beers Criteria
-    # J Am Geriatr Soc. 2023;71(7):2052-2081
-    BEERS_DRUGS: dict[str, GeriatricAlert] = {
-        "diazepam": GeriatricAlert(
-            "diazepam", BeersCategory.AVOID,
-            "Long-acting benzodiazepine; increased sensitivity in older adults, "
-            "prolonged sedation, increased risk of falls, fractures, cognitive impairment",
-            "AVOID. Use short-acting alternatives if absolutely necessary (lorazepam, oxazepam). "
-            "Non-pharmacological approaches preferred.",
-            "AGS Beers 2023 Table 2", falls_risk=True, cognitive_risk=True, anticholinergic_burden=0,
-        ),
-        "chlordiazepoxide": GeriatricAlert(
-            "chlordiazepoxide", BeersCategory.AVOID,
-            "Long-acting benzodiazepine; prolonged half-life in elderly (up to 200h with metabolites)",
-            "AVOID. If benzodiazepine required, use lorazepam (no active metabolites, shorter t1/2).",
-            "AGS Beers 2023 Table 2", falls_risk=True, cognitive_risk=True,
-        ),
-        "zolpidem": GeriatricAlert(
-            "zolpidem", BeersCategory.AVOID,
-            "Z-drug; benzodiazepine receptor agonist with similar risks. "
-            "ER visits for adverse events nearly 8x higher in >65 year olds",
-            "AVOID. Non-pharmacological sleep interventions first. "
-            "If needed: melatonin 0.5-2mg, trazodone low-dose.",
-            "AGS Beers 2023 Table 2; FDA Safety Communication 2013", falls_risk=True, cognitive_risk=True,
-        ),
-        "amitriptyline": GeriatricAlert(
-            "amitriptyline", BeersCategory.AVOID,
-            "Highly anticholinergic TCA; sedation, orthostatic hypotension, cardiac conduction delays",
-            "AVOID as first-line. If antidepressant needed: SSRI preferred (sertraline, escitalopram).",
-            "AGS Beers 2023 Table 2", falls_risk=True, cognitive_risk=True, anticholinergic_burden=3,
-        ),
-        "diphenhydramine": GeriatricAlert(
-            "diphenhydramine", BeersCategory.AVOID,
-            "First-generation antihistamine; highly anticholinergic, cognitive impairment, delirium risk",
-            "AVOID. Use second-generation antihistamines (cetirizine, loratadine) for allergy. "
-            "Not recommended as sleep aid in elderly.",
-            "AGS Beers 2023 Table 2", cognitive_risk=True, anticholinergic_burden=3,
-        ),
-        "glibenclamide": GeriatricAlert(
-            "glibenclamide", BeersCategory.AVOID,
-            "Long-acting sulfonylurea; higher risk of prolonged hypoglycemia in elderly. "
-            "Hypoglycemia risk increases with age and declining renal function.",
-            "AVOID. Use shorter-acting sulfonylurea (gliclazide) or non-SU agents (metformin, DPP-4i).",
-            "AGS Beers 2023 Table 2; STOPP B7",
-        ),
-        "metoclopramide": GeriatricAlert(
-            "metoclopramide", BeersCategory.AVOID,
-            "Extrapyramidal effects including tardive dyskinesia; risk increases with duration and age",
-            "AVOID unless gastroparesis with no alternative. Maximum 5 days if used. "
-            "Consider domperidone (where available) with ECG monitoring.",
-            "AGS Beers 2023 Table 2; EMA restriction 2013",
-        ),
-        "nitrofurantoin": GeriatricAlert(
-            "nitrofurantoin", BeersCategory.AVOID_CONDITIONAL,
-            "Ineffective when CrCl <30 mL/min; risk of pulmonary toxicity with prolonged use",
-            "AVOID if CrCl <30. Acceptable for short-course (5-7 days) UTI treatment if CrCl >=30.",
-            "AGS Beers 2023 Table 2; STOPP J3",
-        ),
-        "nsaid_long_term": GeriatricAlert(
-            "nsaid_long_term", BeersCategory.AVOID,
-            "GI bleeding risk increases >4x in >65. Renal impairment, fluid retention, "
-            "cardiovascular risk. Risk further increased with anticoagulants/antiplatelets.",
-            "AVOID chronic use. Short course (<=7 days) at lowest dose if essential. "
-            "Prefer paracetamol, topical NSAIDs, non-pharmacological approaches.",
-            "AGS Beers 2023 Table 2; STOPP K1",
-        ),
-        "digoxin": GeriatricAlert(
-            "digoxin", BeersCategory.DOSE_ADJUST,
-            "Narrow therapeutic index; decreased renal clearance in elderly. "
-            "Toxicity risk high at doses >0.125mg/day in elderly with renal impairment.",
-            "If used: dose <=0.125mg/day. Monitor levels (target 0.5-0.9 ng/mL in HF). "
-            "Check renal function and potassium regularly.",
-            "AGS Beers 2023 Table 2; NICE NG106",
-        ),
-    }
+    def __init__(self):
+        from curaniq.data_loader import load_json_data
+        raw = load_json_data("beers_criteria_2023.json")
 
-    # Anticholinergic Burden Scale (ACB) scores for common drugs
-    # Source: Boustani et al. 2008; Aging Clin Exp Res. 2008;20(5):484-496
-    ACB_SCORES: dict[str, int] = {
-        "amitriptyline": 3, "atropine": 3, "chlorpheniramine": 3,
-        "chlorpromazine": 3, "clomipramine": 3, "clozapine": 3,
-        "desipramine": 3, "diphenhydramine": 3, "doxepin": 3,
-        "hydroxyzine": 3, "imipramine": 3, "nortriptyline": 3,
-        "olanzapine": 3, "oxybutynin": 3, "paroxetine": 3,
-        "promethazine": 3, "quetiapine": 3, "thioridazine": 3,
-        "tolterodine": 3, "trifluoperazine": 3,
-        "cetirizine": 2, "cimetidine": 2, "loratadine": 2,
-        "ranitidine": 2, "cyclobenzaprine": 2,
-        "alprazolam": 1, "atenolol": 1, "codeine": 1,
-        "diazepam": 1, "digoxin": 1, "furosemide": 1,
-        "morphine": 1, "prednisone": 1, "theophylline": 1,
-        "tramadol": 1, "warfarin": 1,
-    }
+        # Build BEERS_DRUGS from data file
+        self._beers_drugs: dict[str, GeriatricAlert] = {}
+        for entry in raw.get("avoid_in_older_adults", []):
+            drug = entry["drug"].lower()
+            self._beers_drugs[drug] = GeriatricAlert(
+                drug=drug,
+                category=BeersCategory.AVOID if entry.get("strength") == "strong" else BeersCategory.USE_WITH_CAUTION,
+                rationale=entry.get("rationale", ""),
+                recommendation=entry.get("recommendation", ""),
+                source=raw.get("_metadata", {}).get("reference", "AGS Beers 2023"),
+                falls_risk=entry.get("falls_risk", False),
+                cognitive_risk=entry.get("cognitive_risk", False),
+                anticholinergic_burden=entry.get("acb", 0),
+            )
 
-    # Falls-risk drugs (CNS-active, orthostatic risk)
-    FALLS_RISK_CLASSES: set[str] = {
-        "benzodiazepine", "opioid", "antipsychotic", "antidepressant_tca",
-        "alpha_blocker", "diuretic_loop", "antihypertensive_central",
-        "anticonvulsant", "skeletal_muscle_relaxant", "z_drug",
-    }
+        # Build ACB_SCORES from data file
+        self._acb_scores: dict[str, int] = {}
+        for score_str, drugs in raw.get("acb_scores", {}).items():
+            score = int(score_str)
+            for drug in drugs:
+                self._acb_scores[drug.lower()] = score
+
+        logger.info("GeriatricSafetyEngine: loaded %d Beers PIMs, %d ACB entries",
+                     len(self._beers_drugs), len(self._acb_scores))
 
     def assess(self, patient_age: int, drugs: list[str],
                egfr: Optional[float] = None) -> list[GeriatricAlert]:
@@ -175,18 +102,13 @@ class GeriatricSafetyEngine:
 
         for drug in drugs:
             drug_lower = drug.lower().strip()
-            # Check Beers criteria
-            beers_alert = self.BEERS_DRUGS.get(drug_lower)
+            # Check Beers criteria (from data file)
+            beers_alert = self._beers_drugs.get(drug_lower)
             if beers_alert:
-                # Conditional checks
-                if beers_alert.category == BeersCategory.AVOID_CONDITIONAL:
-                    if drug_lower == "nitrofurantoin" and egfr and egfr < 30:
-                        alerts.append(beers_alert)
-                else:
-                    alerts.append(beers_alert)
+                alerts.append(beers_alert)
 
-            # Accumulate ACB score
-            acb = self.ACB_SCORES.get(drug_lower, 0)
+            # Accumulate ACB score (from data file)
+            acb = self._acb_scores.get(drug_lower, 0)
             total_acb += acb
 
         # Total ACB burden alert
@@ -240,55 +162,14 @@ class RenalDoseAdjustment:
 class DedicatedRenalDosingEngine:
     """
     L3-14: CKD-stage-specific dose adjustments.
-
-    Extends L3-1 CQL renal functions with:
-    - Complete CKD G1-G5D staging with KDIGO 2024 criteria
-    - Per-drug, per-stage dose tables from Renal Drug Handbook
-    - Dialysis supplementation doses (HD, PD, CRRT)
-    - AKI-specific recommendations
-    - Drug accumulation warnings for renally-cleared drugs
+    All dose data loaded from curaniq/data/renal_dosing.json — not hardcoded.
     """
 
-    # Renal dose adjustment database
-    # Source: Renal Drug Handbook (Ashley & Dunleavy, 5th ed), FDA prescribing info
-    RENAL_ADJUSTMENTS: dict[str, dict[str, RenalDoseAdjustment]] = {
-        "metformin": {
-            "G1":  RenalDoseAdjustment("metformin", CKDStage.G1,  "normal", "500-1000mg BID", "2000mg/day", "eGFR annually", "", "KDIGO DM 2022; FDA label 2024"),
-            "G2":  RenalDoseAdjustment("metformin", CKDStage.G2,  "normal", "500-1000mg BID", "2000mg/day", "eGFR q6mo", "", "KDIGO DM 2022"),
-            "G3a": RenalDoseAdjustment("metformin", CKDStage.G3a, "normal", "500-1000mg BID", "2000mg/day", "eGFR q3-6mo", "", "KDIGO DM 2022"),
-            "G3b": RenalDoseAdjustment("metformin", CKDStage.G3b, "reduce", "500mg BID", "1000mg/day", "eGFR q3mo. Hold if acutely ill.", "", "KDIGO DM 2022; ADA 2024"),
-            "G4":  RenalDoseAdjustment("metformin", CKDStage.G4,  "avoid", "", "", "Lactic acidosis risk. Discontinue.", "", "FDA label; KDIGO DM 2022"),
-            "G5":  RenalDoseAdjustment("metformin", CKDStage.G5,  "contraindicated", "", "", "Contraindicated. Lactic acidosis.", "", "FDA label"),
-            "G5D": RenalDoseAdjustment("metformin", CKDStage.G5D, "contraindicated", "", "", "Contraindicated on dialysis.", "Not dialyzable", "Renal Drug Handbook"),
-        },
-        "gentamicin": {
-            "G1":  RenalDoseAdjustment("gentamicin", CKDStage.G1,  "normal", "5-7mg/kg OD or 1-1.7mg/kg q8h", "7mg/kg", "Trough <1, peak 5-10 (conventional) or trough <1 (extended interval)", "", "Sanford Guide 2024"),
-            "G2":  RenalDoseAdjustment("gentamicin", CKDStage.G2,  "extend_interval", "5-7mg/kg q24-36h", "7mg/kg", "Levels mandatory. Trough <1mg/L", "", "Renal Drug Handbook"),
-            "G3a": RenalDoseAdjustment("gentamicin", CKDStage.G3a, "extend_interval", "5-7mg/kg q36-48h", "7mg/kg", "Levels mandatory pre-dose 3. Trough <1mg/L", "", "Renal Drug Handbook"),
-            "G3b": RenalDoseAdjustment("gentamicin", CKDStage.G3b, "reduce", "2-3mg/kg q48h", "3mg/kg", "Levels mandatory. Consider alternative agent.", "", "Renal Drug Handbook"),
-            "G4":  RenalDoseAdjustment("gentamicin", CKDStage.G4,  "avoid", "1-1.7mg/kg then by levels", "", "AVOID if possible. If used: single dose then levels only.", "", "Renal Drug Handbook"),
-            "G5":  RenalDoseAdjustment("gentamicin", CKDStage.G5,  "avoid", "", "", "AVOID. Nephrotoxic + ototoxic accumulation.", "", "Renal Drug Handbook"),
-            "G5D": RenalDoseAdjustment("gentamicin", CKDStage.G5D, "reduce", "1-1.7mg/kg loading", "", "Dialyzable (50-60%). Re-dose post-HD by levels.", "Re-dose after dialysis based on levels", "Renal Drug Handbook"),
-        },
-        "vancomycin": {
-            "G1":  RenalDoseAdjustment("vancomycin", CKDStage.G1,  "normal", "15-20mg/kg q8-12h", "4g/day", "AUC/MIC target 400-600 (IDSA/ASHP 2020). Trough monitoring being replaced by AUC-guided.", "", "IDSA/ASHP 2020 guideline"),
-            "G2":  RenalDoseAdjustment("vancomycin", CKDStage.G2,  "normal", "15-20mg/kg q12h", "4g/day", "AUC/MIC monitoring. eGFR q48-72h", "", "IDSA/ASHP 2020"),
-            "G3a": RenalDoseAdjustment("vancomycin", CKDStage.G3a, "extend_interval", "15-20mg/kg q24h", "2g/day", "AUC-guided dosing mandatory. Nephrotoxicity monitoring.", "", "IDSA/ASHP 2020; Renal Drug Handbook"),
-            "G3b": RenalDoseAdjustment("vancomycin", CKDStage.G3b, "extend_interval", "15-20mg/kg q24-48h", "1.5g/day", "Levels mandatory pre-dose 4. Avoid concomitant nephrotoxins.", "", "Renal Drug Handbook"),
-            "G4":  RenalDoseAdjustment("vancomycin", CKDStage.G4,  "reduce", "15mg/kg loading, then by levels", "", "Single loading dose then AUC-guided only. Daily levels.", "", "Renal Drug Handbook"),
-            "G5":  RenalDoseAdjustment("vancomycin", CKDStage.G5,  "reduce", "15mg/kg loading, then by levels q48-96h", "", "Extended interval based on levels. May need re-dosing only q4-7 days.", "", "Renal Drug Handbook"),
-            "G5D": RenalDoseAdjustment("vancomycin", CKDStage.G5D, "reduce", "15-25mg/kg loading", "", "Removed by high-flux HD (25-50%). Standard HD: minimal removal.", "Post-HD supplemental dose based on pre-HD level", "Renal Drug Handbook"),
-        },
-        "gabapentin": {
-            "G1":  RenalDoseAdjustment("gabapentin", CKDStage.G1,  "normal", "300-1200mg TID", "3600mg/day", "", "", "FDA label"),
-            "G2":  RenalDoseAdjustment("gabapentin", CKDStage.G2,  "normal", "300-1200mg TID", "3600mg/day", "", "", "FDA label"),
-            "G3a": RenalDoseAdjustment("gabapentin", CKDStage.G3a, "reduce", "200-700mg BID", "1400mg/day", "CNS toxicity monitoring", "", "FDA label; Renal Drug Handbook"),
-            "G3b": RenalDoseAdjustment("gabapentin", CKDStage.G3b, "reduce", "100-300mg BID", "600mg/day", "CNS toxicity (ataxia, drowsiness)", "", "FDA label; Renal Drug Handbook"),
-            "G4":  RenalDoseAdjustment("gabapentin", CKDStage.G4,  "reduce", "100-300mg OD", "300mg/day", "CNS monitoring. Dose after HD on dialysis days.", "", "FDA label"),
-            "G5":  RenalDoseAdjustment("gabapentin", CKDStage.G5,  "reduce", "100-300mg OD", "300mg/day", "Accumulation risk. Consider alternative.", "", "Renal Drug Handbook"),
-            "G5D": RenalDoseAdjustment("gabapentin", CKDStage.G5D, "reduce", "100-300mg post-HD", "300mg/day", "Dialyzable. Give supplemental dose after each HD session.", "200-300mg post-HD", "Renal Drug Handbook"),
-        },
-    }
+    def __init__(self):
+        from curaniq.data_loader import load_json_data
+        raw = load_json_data("renal_dosing.json")
+        self._adjustments: dict[str, dict[str, str]] = raw.get("adjustments", {})
+        logger.info("DedicatedRenalDosingEngine: loaded %d drugs", len(self._adjustments))
 
     def classify_ckd_stage(self, egfr: float, on_dialysis: bool = False) -> CKDStage:
         """Classify CKD stage per KDIGO 2024."""
@@ -308,13 +189,28 @@ class DedicatedRenalDosingEngine:
 
     def get_adjustment(self, drug: str, egfr: float,
                        on_dialysis: bool = False) -> Optional[RenalDoseAdjustment]:
-        """Get CKD-stage-specific dose adjustment for a drug."""
+        """Get CKD-stage-specific dose adjustment for a drug (from data file)."""
         drug_lower = drug.lower().strip()
-        drug_table = self.RENAL_ADJUSTMENTS.get(drug_lower)
-        if not drug_table:
+        drug_data = self._adjustments.get(drug_lower)
+        if not drug_data:
             return None
         stage = self.classify_ckd_stage(egfr, on_dialysis)
-        return drug_table.get(stage.value)
+        dose_str = drug_data.get(stage.value, "")
+        if not dose_str:
+            return None
+        source = drug_data.get("source", "")
+        action = "normal"
+        if "contraindicated" in dose_str.lower():
+            action = "contraindicated"
+        elif "avoid" in dose_str.lower():
+            action = "avoid"
+        elif any(kw in dose_str.lower() for kw in ["reduce", "max", "half", "q24", "q36", "q48"]):
+            action = "reduce"
+        return RenalDoseAdjustment(
+            drug=drug_lower, ckd_stage=stage, action=action,
+            adjusted_dose=dose_str, max_dose="", monitoring="",
+            dialysis_supplement="", source=source,
+        )
 
 
 # =============================================================================

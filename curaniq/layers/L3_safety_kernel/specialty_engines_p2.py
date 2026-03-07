@@ -51,57 +51,34 @@ class AntimicrobialAssessment:
 class AntimicrobialStewardshipEngine:
     """
     L3-10: WHO AWaRe-based antimicrobial stewardship.
-
-    Enforces:
-    - AWaRe classification (WHO 2023) for all antibiotics
-    - Spectrum matching: narrowest effective agent
-    - Duration guidance (IDSA/NICE per indication)
-    - Automatic de-escalation suggestions
-    - Reserve antibiotic restrictions (requires justification)
+    All antimicrobial data loaded from curaniq/data/who_aware_2023.json.
     """
 
-    # WHO AWaRe 2023 Essential Medicines List classification
-    # Source: WHO AWaRe Classification 2023, WHO/MHP/HPS/EML/2023.04
-    AWARE_DB: dict[str, tuple[AWaReCategory, str]] = {
-        # ACCESS — first-line, narrow spectrum
-        "amoxicillin":        (AWaReCategory.ACCESS,  "Narrow: strep, some gram-neg"),
-        "amoxicillin-clav":   (AWaReCategory.ACCESS,  "Moderate: adds beta-lactamase coverage"),
-        "ampicillin":         (AWaReCategory.ACCESS,  "Narrow: strep, enterococcus, some gram-neg"),
-        "cefalexin":          (AWaReCategory.ACCESS,  "1st-gen ceph: gram-pos, some gram-neg"),
-        "clindamycin":        (AWaReCategory.ACCESS,  "Gram-pos, anaerobes"),
-        "doxycycline":        (AWaReCategory.ACCESS,  "Broad: atypicals, rickettsia, some gram-neg"),
-        "metronidazole":      (AWaReCategory.ACCESS,  "Anaerobes, protozoa"),
-        "nitrofurantoin":     (AWaReCategory.ACCESS,  "UTI only: E. coli, Enterococcus"),
-        "trimethoprim":       (AWaReCategory.ACCESS,  "UTI: common gram-neg"),
-        "sulfamethoxazole-trimethoprim": (AWaReCategory.ACCESS, "Broad: PJP, UTI, some MRSA"),
-        # WATCH — higher resistance potential
-        "azithromycin":       (AWaReCategory.WATCH,   "Macrolide: atypicals, some gram-pos"),
-        "ciprofloxacin":      (AWaReCategory.WATCH,   "FQ: broad gram-neg, some gram-pos"),
-        "levofloxacin":       (AWaReCategory.WATCH,   "Respiratory FQ: pneumococcus + gram-neg"),
-        "moxifloxacin":       (AWaReCategory.WATCH,   "Respiratory FQ: broadest anti-anaerobe FQ"),
-        "ceftriaxone":        (AWaReCategory.WATCH,   "3rd-gen ceph: broad gram-neg"),
-        "cefotaxime":         (AWaReCategory.WATCH,   "3rd-gen ceph: similar to ceftriaxone"),
-        "cefuroxime":         (AWaReCategory.WATCH,   "2nd-gen ceph: moderate spectrum"),
-        "piperacillin-tazobactam": (AWaReCategory.WATCH, "Broad: Pseudomonas, anaerobes, gram-neg"),
-        "vancomycin":         (AWaReCategory.WATCH,   "Gram-pos including MRSA"),
-        "gentamicin":         (AWaReCategory.WATCH,   "Aminoglycoside: gram-neg synergy"),
-        # RESERVE — last resort
-        "meropenem":          (AWaReCategory.RESERVE, "Carbapenem: broadest beta-lactam"),
-        "imipenem":           (AWaReCategory.RESERVE, "Carbapenem: broad incl Pseudomonas"),
-        "ertapenem":          (AWaReCategory.RESERVE, "Carbapenem: broad but NO Pseudomonas"),
-        "linezolid":          (AWaReCategory.RESERVE, "Oxazolidinone: VRE, MRSA"),
-        "daptomycin":         (AWaReCategory.RESERVE, "Lipopeptide: MRSA, VRE (not lung)"),
-        "colistin":           (AWaReCategory.RESERVE, "Polymyxin: last-line gram-neg MDR"),
-        "tigecycline":        (AWaReCategory.RESERVE, "Glycylcycline: broad incl MDR"),
-        "ceftazidime-avibactam": (AWaReCategory.RESERVE, "CRE coverage (not metallo-BL)"),
-        "ceftolozane-tazobactam": (AWaReCategory.RESERVE, "MDR Pseudomonas"),
-    }
+    def __init__(self):
+        from curaniq.data_loader import load_json_data
+        raw = load_json_data("who_aware_2023.json")
+        self._aware_db: dict[str, tuple[AWaReCategory, str]] = {}
+        category_map = {
+            "access": AWaReCategory.ACCESS,
+            "watch": AWaReCategory.WATCH,
+            "reserve": AWaReCategory.RESERVE,
+        }
+        for cat_name, cat_enum in category_map.items():
+            cat_data = raw.get(cat_name, {})
+            drugs = cat_data.get("drugs", {})
+            for drug_name, drug_info in drugs.items():
+                self._aware_db[drug_name.lower()] = (
+                    cat_enum,
+                    drug_info.get("spectrum", ""),
+                )
+        logger.info("AntimicrobialStewardshipEngine: loaded %d antimicrobials from AWaRe 2023",
+                     len(self._aware_db))
 
     def assess(self, drug: str, indication: str = "",
                culture_available: bool = False) -> AntimicrobialAssessment:
-        """Assess antimicrobial appropriateness using WHO AWaRe."""
+        """Assess antimicrobial appropriateness using WHO AWaRe (from data file)."""
         drug_lower = drug.lower().strip()
-        entry = self.AWARE_DB.get(drug_lower)
+        entry = self._aware_db.get(drug_lower)
 
         if not entry:
             return AntimicrobialAssessment(

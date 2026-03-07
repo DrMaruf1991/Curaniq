@@ -1,0 +1,288 @@
+{
+  "_metadata": {
+    "source": "WHO AWaRe Classification of Antibiotics for Evaluation and Monitoring of Use, 2023",
+    "reference": "WHO/MHP/HPS/EML/2023.04",
+    "version": "2023",
+    "last_updated": "2023-10-01",
+    "total_entries": 66
+  },
+  "access": {
+    "_description": "First/second-line for common infections. Narrow spectrum, low resistance risk. Target: >=60% of national consumption.",
+    "drugs": {
+      "amoxicillin": {
+        "spectrum": "Narrow gram-pos + some gram-neg",
+        "atc": "J01CA04"
+      },
+      "amoxicillin-clavulanate": {
+        "spectrum": "Extended: beta-lactamase producers",
+        "atc": "J01CR02"
+      },
+      "ampicillin": {
+        "spectrum": "Narrow gram-pos + enterococcus",
+        "atc": "J01CA01"
+      },
+      "benzylpenicillin": {
+        "spectrum": "Narrow gram-pos (strep, pneumococcus)",
+        "atc": "J01CE01"
+      },
+      "phenoxymethylpenicillin": {
+        "spectrum": "Narrow oral gram-pos",
+        "atc": "J01CE02"
+      },
+      "cefalexin": {
+        "spectrum": "1st-gen ceph: gram-pos, some gram-neg",
+        "atc": "J01DB01"
+      },
+      "clindamycin": {
+        "spectrum": "Gram-pos + anaerobes",
+        "atc": "J01FF01"
+      },
+      "cloxacillin": {
+        "spectrum": "Narrow anti-staphylococcal",
+        "atc": "J01CF02"
+      },
+      "doxycycline": {
+        "spectrum": "Broad: atypicals, rickettsia",
+        "atc": "J01AA02"
+      },
+      "metronidazole": {
+        "spectrum": "Anaerobes + protozoa",
+        "atc": "J01XD01"
+      },
+      "nitrofurantoin": {
+        "spectrum": "UTI only: E. coli, Enterococcus",
+        "atc": "J01XE01"
+      },
+      "sulfamethoxazole-trimethoprim": {
+        "spectrum": "Broad: PJP, UTI, MRSA",
+        "atc": "J01EE01"
+      },
+      "trimethoprim": {
+        "spectrum": "UTI: gram-neg",
+        "atc": "J01EA01"
+      },
+      "chloramphenicol": {
+        "spectrum": "Broad: meningitis, typhoid",
+        "atc": "J01BA01"
+      },
+      "gentamicin": {
+        "spectrum": "Aminoglycoside: gram-neg",
+        "atc": "J01GB03"
+      },
+      "amikacin": {
+        "spectrum": "Aminoglycoside: broader gram-neg",
+        "atc": "J01GB06"
+      },
+      "cefazolin": {
+        "spectrum": "1st-gen ceph: surgical prophylaxis",
+        "atc": "J01DB04"
+      },
+      "procaine_penicillin": {
+        "spectrum": "IM long-acting: syphilis",
+        "atc": "J01CE09"
+      },
+      "benzathine_penicillin": {
+        "spectrum": "IM depot: rheumatic fever prevention",
+        "atc": "J01CE08"
+      },
+      "nystatin": {
+        "spectrum": "Topical antifungal: candida",
+        "atc": "A07AA02"
+      },
+      "clotrimazole": {
+        "spectrum": "Topical antifungal: dermatophytes + candida",
+        "atc": "D01AC01"
+      },
+      "griseofulvin": {
+        "spectrum": "Oral antifungal: dermatophytes",
+        "atc": "D01BA01"
+      },
+      "fluconazole": {
+        "spectrum": "Systemic antifungal: candida, crypto",
+        "atc": "J02AC01"
+      }
+    }
+  },
+  "watch": {
+    "_description": "Higher resistance potential. First/second-line only for specific indications. Stewardship priority targets.",
+    "drugs": {
+      "azithromycin": {
+        "spectrum": "Macrolide: atypicals, STIs",
+        "atc": "J01FA10"
+      },
+      "clarithromycin": {
+        "spectrum": "Macrolide: H.pylori, atypicals",
+        "atc": "J01FA09"
+      },
+      "erythromycin": {
+        "spectrum": "Macrolide: penicillin-allergic",
+        "atc": "J01FA01"
+      },
+      "ciprofloxacin": {
+        "spectrum": "FQ: broad gram-neg, Pseudomonas",
+        "atc": "J01MA02"
+      },
+      "levofloxacin": {
+        "spectrum": "Respiratory FQ: pneumococcus + gram-neg",
+        "atc": "J01MA12"
+      },
+      "moxifloxacin": {
+        "spectrum": "Respiratory FQ: broadest anaerobe FQ",
+        "atc": "J01MA14"
+      },
+      "norfloxacin": {
+        "spectrum": "FQ: UTI-focused",
+        "atc": "J01MA06"
+      },
+      "ofloxacin": {
+        "spectrum": "FQ: UTI + respiratory",
+        "atc": "J01MA01"
+      },
+      "cefuroxime": {
+        "spectrum": "2nd-gen ceph: moderate spectrum",
+        "atc": "J01DC02"
+      },
+      "cefixime": {
+        "spectrum": "3rd-gen oral ceph: gonorrhea, UTI",
+        "atc": "J01DD08"
+      },
+      "ceftriaxone": {
+        "spectrum": "3rd-gen ceph: broad gram-neg, CNS",
+        "atc": "J01DD04"
+      },
+      "cefotaxime": {
+        "spectrum": "3rd-gen ceph: neonatal meningitis",
+        "atc": "J01DD01"
+      },
+      "ceftazidime": {
+        "spectrum": "3rd-gen ceph: anti-Pseudomonal",
+        "atc": "J01DD02"
+      },
+      "cefepime": {
+        "spectrum": "4th-gen ceph: broad incl Pseudomonas",
+        "atc": "J01DE01"
+      },
+      "piperacillin-tazobactam": {
+        "spectrum": "Broad: Pseudomonas + anaerobes",
+        "atc": "J01CR05"
+      },
+      "vancomycin": {
+        "spectrum": "Gram-pos incl MRSA",
+        "atc": "J01XA01"
+      },
+      "teicoplanin": {
+        "spectrum": "Gram-pos: MRSA alternative",
+        "atc": "J01XA02"
+      },
+      "rifampicin": {
+        "spectrum": "TB + biofilm (staphylococci)",
+        "atc": "J04AB02"
+      },
+      "isoniazid": {
+        "spectrum": "TB first-line",
+        "atc": "J04AC01"
+      },
+      "ethambutol": {
+        "spectrum": "TB first-line",
+        "atc": "J04AK02"
+      },
+      "pyrazinamide": {
+        "spectrum": "TB first-line",
+        "atc": "J04AK01"
+      },
+      "itraconazole": {
+        "spectrum": "Systemic antifungal: aspergillus",
+        "atc": "J02AC02"
+      },
+      "voriconazole": {
+        "spectrum": "Systemic antifungal: invasive aspergillosis",
+        "atc": "J02AC03"
+      },
+      "amphotericin_b": {
+        "spectrum": "Systemic antifungal: broadest",
+        "atc": "J02AA01"
+      },
+      "aciclovir": {
+        "spectrum": "Antiviral: HSV, VZV",
+        "atc": "J05AB01"
+      }
+    }
+  },
+  "reserve": {
+    "_description": "Last resort for confirmed MDR infections. Stewardship mandatory. Restricted access programs.",
+    "drugs": {
+      "meropenem": {
+        "spectrum": "Carbapenem: broadest beta-lactam",
+        "atc": "J01DH02"
+      },
+      "imipenem-cilastatin": {
+        "spectrum": "Carbapenem: broad incl Pseudomonas",
+        "atc": "J01DH51"
+      },
+      "ertapenem": {
+        "spectrum": "Carbapenem: broad but NO Pseudomonas",
+        "atc": "J01DH03"
+      },
+      "doripenem": {
+        "spectrum": "Carbapenem: Pseudomonas focus",
+        "atc": "J01DH04"
+      },
+      "linezolid": {
+        "spectrum": "Oxazolidinone: VRE, MRSA",
+        "atc": "J01XX08"
+      },
+      "tedizolid": {
+        "spectrum": "Oxazolidinone: MRSA skin/soft tissue",
+        "atc": "J01XX11"
+      },
+      "daptomycin": {
+        "spectrum": "Lipopeptide: MRSA, VRE (not lung)",
+        "atc": "J01XX09"
+      },
+      "colistin": {
+        "spectrum": "Polymyxin: last-line MDR gram-neg",
+        "atc": "J01XB01"
+      },
+      "polymyxin_b": {
+        "spectrum": "Polymyxin: MDR gram-neg",
+        "atc": "J01XB02"
+      },
+      "tigecycline": {
+        "spectrum": "Glycylcycline: broad incl MDR",
+        "atc": "J01AA12"
+      },
+      "ceftazidime-avibactam": {
+        "spectrum": "CRE coverage (not metallo-BL)",
+        "atc": "J01DD52"
+      },
+      "ceftolozane-tazobactam": {
+        "spectrum": "MDR Pseudomonas",
+        "atc": "J01DI54"
+      },
+      "meropenem-vaborbactam": {
+        "spectrum": "KPC-producing CRE",
+        "atc": "J01DH52"
+      },
+      "imipenem-relebactam": {
+        "spectrum": "Carbapenem-R gram-neg",
+        "atc": "J01DH56"
+      },
+      "cefiderocol": {
+        "spectrum": "Siderophore ceph: metallo-BL producers",
+        "atc": "J01DI04"
+      },
+      "plazomicin": {
+        "spectrum": "Next-gen aminoglycoside: CRE",
+        "atc": "J01GB14"
+      },
+      "fosfomycin_iv": {
+        "spectrum": "IV: MDR gram-neg (ESBL, CRE)",
+        "atc": "J01XX01"
+      },
+      "aztreonam": {
+        "spectrum": "Monobactam: gram-neg (penicillin-allergic)",
+        "atc": "J01DF01"
+      }
+    }
+  }
+}

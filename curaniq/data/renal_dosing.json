@@ -1,0 +1,220 @@
+{
+  "_metadata": {
+    "source": "FDA prescribing information + Renal Drug Handbook (Ashley & Dunleavy, 5th ed)",
+    "version": "2024",
+    "note": "Dose adjustments by CKD stage. 'action' = normal/reduce/extend/avoid/contraindicated",
+    "total_entries": 21
+  },
+  "adjustments": {
+    "metformin": {
+      "G1": "normal",
+      "G2": "normal",
+      "G3a": "normal up to 2g/day",
+      "G3b": "max 1g/day, monitor",
+      "G4": "avoid",
+      "G5": "contraindicated",
+      "G5D": "contraindicated",
+      "source": "KDIGO DM 2022; FDA"
+    },
+    "gentamicin": {
+      "G1": "normal 5-7mg/kg OD",
+      "G2": "q24-36h",
+      "G3a": "q36-48h",
+      "G3b": "q48h, consider alt",
+      "G4": "avoid if possible",
+      "G5": "avoid",
+      "G5D": "1-1.7mg/kg, re-dose by levels post-HD",
+      "source": "Sanford 2024; RDH"
+    },
+    "vancomycin": {
+      "G1": "15-20mg/kg q8-12h",
+      "G2": "q12h, AUC-guided",
+      "G3a": "q24h, AUC mandatory",
+      "G3b": "q24-48h by levels",
+      "G4": "loading then by levels",
+      "G5": "loading, q4-7d by levels",
+      "G5D": "15-25mg/kg load, post-HD by level",
+      "source": "IDSA/ASHP 2020; RDH"
+    },
+    "gabapentin": {
+      "G1": "300-1200mg TID",
+      "G2": "normal",
+      "G3a": "200-700mg BID",
+      "G3b": "100-300mg BID",
+      "G4": "100-300mg OD",
+      "G5": "100-300mg OD",
+      "G5D": "200-300mg post-HD",
+      "source": "FDA; RDH"
+    },
+    "pregabalin": {
+      "G1": "75-300mg BID",
+      "G2": "normal",
+      "G3a": "75-150mg BID",
+      "G3b": "25-75mg BID",
+      "G4": "25-75mg OD",
+      "G5": "25-75mg OD",
+      "G5D": "25-75mg, supplement post-HD",
+      "source": "FDA; RDH"
+    },
+    "amoxicillin": {
+      "G1": "normal",
+      "G2": "normal",
+      "G3a": "normal",
+      "G3b": "normal dose q12h",
+      "G4": "250-500mg q12h",
+      "G5": "250-500mg q24h",
+      "G5D": "250-500mg q24h, supplement post-HD",
+      "source": "BNF; RDH"
+    },
+    "ciprofloxacin": {
+      "G1": "normal",
+      "G2": "normal",
+      "G3a": "normal",
+      "G3b": "250-500mg q12h",
+      "G4": "250-500mg q18-24h",
+      "G5": "250mg q24h",
+      "G5D": "250-500mg q24h post-HD",
+      "source": "FDA; RDH"
+    },
+    "levofloxacin": {
+      "G1": "normal",
+      "G2": "normal",
+      "G3a": "normal",
+      "G3b": "half dose",
+      "G4": "half dose q24-48h",
+      "G5": "not recommended",
+      "G5D": "not recommended",
+      "source": "FDA; RDH"
+    },
+    "trimethoprim": {
+      "G1": "normal",
+      "G2": "normal",
+      "G3a": "normal",
+      "G3b": "reduce dose",
+      "G4": "avoid long-term",
+      "G5": "avoid",
+      "G5D": "avoid",
+      "source": "BNF; NICE"
+    },
+    "aciclovir": {
+      "G1": "normal",
+      "G2": "normal",
+      "G3a": "normal",
+      "G3b": "reduce dose",
+      "G4": "5mg/kg q24h",
+      "G5": "2.5mg/kg q24h",
+      "G5D": "2.5mg/kg q24h post-HD",
+      "source": "FDA; RDH"
+    },
+    "allopurinol": {
+      "G1": "100-300mg OD",
+      "G2": "100-200mg OD",
+      "G3a": "100mg OD",
+      "G3b": "100mg OD",
+      "G4": "100mg alternate days",
+      "G5": "50-100mg alternate days",
+      "G5D": "100mg post-HD",
+      "source": "ACR 2020; BNF; RDH"
+    },
+    "atenolol": {
+      "G1": "normal",
+      "G2": "normal",
+      "G3a": "50mg OD max",
+      "G3b": "25-50mg OD",
+      "G4": "25mg OD",
+      "G5": "25mg alternate days",
+      "G5D": "25-50mg post-HD",
+      "source": "BNF; RDH"
+    },
+    "bisoprolol": {
+      "G1": "normal",
+      "G2": "normal",
+      "G3a": "normal",
+      "G3b": "normal",
+      "G4": "normal (hepatic metabolism)",
+      "G5": "normal",
+      "G5D": "normal, not dialyzed",
+      "source": "BNF; RDH"
+    },
+    "digoxin": {
+      "G1": "125-250mcg OD",
+      "G2": "125mcg OD",
+      "G3a": "62.5-125mcg OD",
+      "G3b": "62.5mcg OD",
+      "G4": "62.5mcg alternate days",
+      "G5": "by levels only",
+      "G5D": "not dialyzed, by levels",
+      "source": "NICE NG106; RDH"
+    },
+    "enoxaparin_treatment": {
+      "G1": "1mg/kg q12h",
+      "G2": "normal",
+      "G3a": "normal",
+      "G3b": "1mg/kg OD",
+      "G4": "1mg/kg OD, anti-Xa guided",
+      "G5": "avoid or reduce, anti-Xa mandatory",
+      "G5D": "avoid",
+      "source": "CHEST 2021; RDH"
+    },
+    "lithium": {
+      "G1": "normal, by levels",
+      "G2": "normal, by levels",
+      "G3a": "reduce dose, levels q1-2wk",
+      "G3b": "reduce 25-50%, levels q1wk",
+      "G4": "avoid if possible",
+      "G5": "avoid",
+      "G5D": "avoid (removed by HD)",
+      "source": "NICE CG185; RDH"
+    },
+    "morphine": {
+      "G1": "normal",
+      "G2": "normal",
+      "G3a": "reduce dose 25%",
+      "G3b": "reduce 50%, extend interval",
+      "G4": "avoid (active metabolite M6G accumulates)",
+      "G5": "avoid",
+      "G5D": "avoid, not dialyzed",
+      "source": "WHO Pain Guidelines; RDH"
+    },
+    "ranitidine": {
+      "G1": "normal",
+      "G2": "normal",
+      "G3a": "normal",
+      "G3b": "half dose",
+      "G4": "half dose",
+      "G5": "half dose",
+      "G5D": "give post-HD",
+      "source": "BNF; RDH"
+    },
+    "spironolactone": {
+      "G1": "normal",
+      "G2": "normal with K+ monitoring",
+      "G3a": "25mg OD, K+ monitoring",
+      "G3b": "avoid or 25mg with close K+",
+      "G4": "avoid (hyperkalemia)",
+      "G5": "contraindicated",
+      "G5D": "contraindicated",
+      "source": "NICE NG106; KDIGO"
+    },
+    "rosuvastatin": {
+      "G1": "normal",
+      "G2": "normal",
+      "G3a": "max 20mg",
+      "G3b": "max 10mg",
+      "G4": "5mg, contraindicated 40mg",
+      "G5": "5mg if needed",
+      "G5D": "5mg if needed",
+      "source": "FDA; KDIGO Lipid 2013"
+    },
+    "dabigatran": {
+      "G1": "150mg BID",
+      "G2": "150mg BID",
+      "G3a": "150mg BID (or 110mg if age>80/high risk)",
+      "G3b": "avoid in US; 110mg BID in EU/UK",
+      "G4": "contraindicated",
+      "G5": "contraindicated",
+      "G5D": "contraindicated",
+      "source": "FDA; ESC 2024; EMA"
+    }
+  }
+}

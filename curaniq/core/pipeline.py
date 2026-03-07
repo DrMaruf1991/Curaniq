@@ -222,6 +222,26 @@ from curaniq.layers.L3_safety_kernel.specialty_engines_p2 import (
     TemporalLogicVerifier,           # L3-4
 )
 
+# ── P2 CLUSTER 2: L1/L2 Evidence Pipeline (14 modules) ──
+from curaniq.layers.L1_evidence_ingestion.evidence_sources_p2 import (
+    PreprintQuarantinePipeline,     # L1-6
+    WHOICTRPConnector,              # L1-7
+    EMAEPARConnector,               # L1-8
+    PharmacovigilanceFeed,          # L1-11
+    WHOEssentialMedicinesConnector, # L1-13
+    WebIntelligenceScanner,         # L1-17
+)
+from curaniq.layers.L2_curation.evidence_curation_p2 import (
+    OntologyCrossMapValidator,      # L2-2
+    GuidelineConflictResolver,      # L2-5
+    CitationIntentClassifier,       # L2-8
+    ConceptDriftMonitor,            # L2-9
+    MetaAnalysisEngine,             # L2-10
+    ApplicabilityEngine,            # L2-11
+    JournalIntegrityScorer,         # L2-12
+    TrialIntegrityDetector,         # L2-14
+)
+
 logger = logging.getLogger(__name__)
 
 
@@ -549,6 +569,22 @@ class CURANIQPipeline:
         self.formal_verifier = FormalVerificationEngine()      # L3-3
         self.temporal_verifier = TemporalLogicVerifier()       # L3-4
 
+        # ── P2 CLUSTER 2: L1/L2 Evidence Pipeline ──
+        self.preprint_quarantine = PreprintQuarantinePipeline()  # L1-6
+        self.ictrp = WHOICTRPConnector()                         # L1-7
+        self.ema_epar = EMAEPARConnector()                       # L1-8
+        self.pharmacovigilance = PharmacovigilanceFeed()          # L1-11
+        self.who_eml = WHOEssentialMedicinesConnector()           # L1-13
+        self.web_intelligence = WebIntelligenceScanner()          # L1-17
+        self.cross_map_validator = OntologyCrossMapValidator()    # L2-2
+        self.guideline_conflicts = GuidelineConflictResolver()    # L2-5
+        self.citation_intent = CitationIntentClassifier()         # L2-8
+        self.concept_drift = ConceptDriftMonitor()                # L2-9
+        self.meta_analysis = MetaAnalysisEngine()                 # L2-10
+        self.applicability_engine = ApplicabilityEngine()         # L2-11
+        self.journal_integrity = JournalIntegrityScorer()         # L2-12
+        self.trial_integrity = TrialIntegrityDetector()           # L2-14
+
     def process(self, query: ClinicalQuery) -> CURANIQResponse:
         """
         Execute the complete CURANIQ pipeline for a clinical query.
@@ -771,6 +807,55 @@ class CURANIQPipeline:
         terminology_manifest = self.terminology_versions.get_version_manifest()
 
         # ═══════════════════════════════════════════════════════════════
+        # STAGE 5.6: L1-6 Preprint Quarantine
+        # Flag and reduce confidence of preprint evidence sources.
+        # ═══════════════════════════════════════════════════════════════
+        for ev in evidence_pack.objects:
+            preprint_check = self.preprint_quarantine.check(
+                doi=getattr(ev, 'doi', '') or '',
+                url=getattr(ev, 'url', '') or '',
+                title=ev.title,
+                abstract=ev.snippet,
+            )
+            if preprint_check.is_preprint:
+                # Reduce evidence quality score for preprints
+                existing_score = getattr(ev, '_quality_score', 0.7)
+                object.__setattr__(ev, '_quality_score',
+                    existing_score * preprint_check.confidence_modifier)
+                negative_flags.append(
+                    f"PREPRINT: {ev.title[:60]} — {preprint_check.warning[:80]}"
+                )
+
+        # ═══════════════════════════════════════════════════════════════
+        # STAGE 5.7: L2-14 Trial Integrity + L2-12 Journal Integrity
+        # Detect p-hacking signals, predatory journals.
+        # ═══════════════════════════════════════════════════════════════
+        for ev in evidence_pack.objects:
+            # Trial integrity check
+            integrity = self.trial_integrity.assess_integrity(ev.snippet)
+            if integrity["integrity_risk_score"] >= 0.5:
+                negative_flags.append(
+                    f"TRIAL_INTEGRITY [{integrity['integrity_risk_score']}]: "
+                    f"{ev.title[:50]} — {integrity['signals'][:2]}"
+                )
+
+            # Journal integrity check
+            journal_name = getattr(ev, 'journal', '') or ''
+            if journal_name:
+                j_score, j_warnings = self.journal_integrity.score_journal(journal_name)
+                if j_score < 0.5:
+                    negative_flags.append(
+                        f"JOURNAL_INTEGRITY [{j_score}]: {journal_name} — {'; '.join(j_warnings[:2])}"
+                    )
+
+        # ═══════════════════════════════════════════════════════════════
+        # STAGE 5.8: L2-8 Citation Intent Classification
+        # Classify whether evidence SUPPORTS or CONTRADICTS each claim
+        # area. Contradicting evidence gets special treatment.
+        # ═══════════════════════════════════════════════════════════════
+        # (Runs post-claim-generation — stored for use in STAGE 8/12)
+
+        # ═══════════════════════════════════════════════════════════════
         # STAGE 6: L3-1 CQL Safety Kernel (deterministic rules)
         # Drugs and food/herbs already extracted by normalizer.
         # ═══════════════════════════════════════════════════════════════
@@ -886,6 +971,23 @@ class CURANIQPipeline:
             for sa in sud_alerts:
                 specialty_alerts.append(
                     f"SUBSTANCE USE [{sa['severity']}]: {sa['drugs']} — {sa['message'][:120]}"
+                )
+
+        # L2-5: Guideline Conflict Detection
+        conflicts = self.guideline_conflicts.find_conflicts(english_text)
+        for conflict in conflicts:
+            specialty_alerts.append(
+                f"GUIDELINE_CONFLICT [{conflict.severity.value}]: {conflict.topic} — "
+                f"{conflict.guideline_a} vs {conflict.guideline_b}. "
+                f"Resolution: {conflict.resolution_strategy[:80]}"
+            )
+
+        # L1-13: WHO Essential Medicines List check
+        eml_status = self.who_eml.get_eml_status(drugs_mentioned)
+        for drug, is_eml in eml_status.items():
+            if not is_eml and drug:
+                specialty_alerts.append(
+                    f"WHO_EML: {drug} is NOT on the WHO Essential Medicines List 2023"
                 )
 
         # Inject specialty alerts into CQL results for downstream use
