@@ -1,0 +1,165 @@
+{
+  "_metadata": {
+    "source": "Clinical differential diagnosis patterns from published medical education resources",
+    "version": "2024",
+    "note": "Used by L4-8 Abductive Reasoning for hypothesis generation",
+    "total_entries": 8
+  },
+  "patterns": {
+    "chest_pain": {
+      "hypotheses": [
+        "Acute coronary syndrome",
+        "Musculoskeletal chest pain",
+        "Gastroesophageal reflux",
+        "Pulmonary embolism",
+        "Pneumothorax",
+        "Pericarditis",
+        "Aortic dissection",
+        "Anxiety/panic attack"
+      ],
+      "red_flags": [
+        "radiation to arm/jaw",
+        "diaphoresis",
+        "dyspnea",
+        "syncope",
+        "tearing pain"
+      ],
+      "source": "Tintinalli's Emergency Medicine; BMJ Best Practice"
+    },
+    "headache": {
+      "hypotheses": [
+        "Tension-type headache",
+        "Migraine",
+        "Medication overuse headache",
+        "Cluster headache",
+        "Subarachnoid hemorrhage",
+        "Meningitis",
+        "Temporal arteritis",
+        "Intracranial mass"
+      ],
+      "red_flags": [
+        "thunderclap onset",
+        "fever + neck stiffness",
+        "papilledema",
+        "age >50 new onset",
+        "worst headache of life"
+      ],
+      "source": "NICE CG150; IHS Classification ICHD-3"
+    },
+    "abdominal_pain": {
+      "hypotheses": [
+        "Appendicitis",
+        "Cholecystitis",
+        "Peptic ulcer",
+        "Pancreatitis",
+        "Renal colic",
+        "Small bowel obstruction",
+        "Diverticulitis",
+        "Ectopic pregnancy"
+      ],
+      "red_flags": [
+        "peritonism",
+        "hemodynamic instability",
+        "positive pregnancy test",
+        "free air on imaging"
+      ],
+      "source": "BMJ Best Practice; Sabiston Textbook of Surgery"
+    },
+    "dyspnea": {
+      "hypotheses": [
+        "Asthma exacerbation",
+        "COPD exacerbation",
+        "Pneumonia",
+        "Heart failure",
+        "Pulmonary embolism",
+        "Pneumothorax",
+        "Anaphylaxis",
+        "Anxiety"
+      ],
+      "red_flags": [
+        "stridor",
+        "cyanosis",
+        "silent chest",
+        "hypotension",
+        "unilateral absent breath sounds"
+      ],
+      "source": "BTS Guidelines; ESC HF 2021"
+    },
+    "syncope": {
+      "hypotheses": [
+        "Vasovagal syncope",
+        "Orthostatic hypotension",
+        "Cardiac arrhythmia",
+        "Aortic stenosis",
+        "Pulmonary embolism",
+        "Seizure (post-ictal)",
+        "Hypoglycemia"
+      ],
+      "red_flags": [
+        "exertional syncope",
+        "chest pain",
+        "palpitations before event",
+        "family Hx sudden death"
+      ],
+      "source": "ESC Syncope 2018; NICE TA/CG"
+    },
+    "fever": {
+      "hypotheses": [
+        "Upper respiratory infection",
+        "UTI",
+        "Pneumonia",
+        "Cellulitis",
+        "Viral gastroenteritis",
+        "Endocarditis",
+        "Malaria (travel)",
+        "Drug fever"
+      ],
+      "red_flags": [
+        "immunosuppressed",
+        "prosthetic valve/joint",
+        "recent travel",
+        "petechial rash",
+        "altered consciousness"
+      ],
+      "source": "NICE NG51 Sepsis; WHO malaria guidelines"
+    },
+    "joint_pain": {
+      "hypotheses": [
+        "Osteoarthritis",
+        "Rheumatoid arthritis",
+        "Gout",
+        "Septic arthritis",
+        "Reactive arthritis",
+        "Psoriatic arthritis",
+        "Fibromyalgia"
+      ],
+      "red_flags": [
+        "hot swollen joint",
+        "fever",
+        "recent surgery/injection",
+        "crystals on aspirate"
+      ],
+      "source": "ACR/EULAR Classification Criteria; BSR Guidelines"
+    },
+    "altered_consciousness": {
+      "hypotheses": [
+        "Hypoglycemia",
+        "Stroke",
+        "Seizure (post-ictal)",
+        "Drug/alcohol intoxication",
+        "Sepsis",
+        "DKA/HHS",
+        "Meningitis/encephalitis",
+        "Opioid overdose"
+      ],
+      "red_flags": [
+        "pinpoint pupils",
+        "focal neurology",
+        "fever",
+        "glucose <3.0",
+        "trauma signs"
+      ],
+      "source": "NICE NG51; AHA/ASA Stroke 2019"
+    }
+  }
+}

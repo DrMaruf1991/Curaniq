@@ -235,6 +235,21 @@ from curaniq.layers.L14_interaction.interaction_extensions import (
     VoiceInputPipeline,            # L14-9
 )
 
+# ── P2 CLUSTER 5: L4/L5 AI & Safety (9 modules) ──
+from curaniq.layers.L4_ai_model.ai_extensions import (
+    SelfCorrectionRAGLoop,         # L4-5
+    MultiAgentDebateProtocol,      # L4-6
+    AdversarialRedTeamAgent,       # L4-7
+    AbductiveReasoningEngine,      # L4-8
+    ClinicalKnowledgeGraphEngine,  # L4-10
+)
+from curaniq.layers.L5_safety_gates.safety_extensions import (
+    ConformalPredictionEngine,     # L5-5
+    SourceTriangulationGate,       # L5-8
+    PredictiveClinicalAlertGenerator,  # L5-15
+    PatientTrajectoryAnalyzer,     # L5-16
+)
+
 # ── P2 CLUSTER 1: L3 Clinical Specialty Engines (12 modules) ──
 from curaniq.layers.L3_safety_kernel.geriatric_renal_anticoag_tdm import (
     GeriatricSafetyEngine,         # L3-8
@@ -640,6 +655,17 @@ class CURANIQPipeline:
         self.source_expander = IterativeSourceExpander()            # L14-5
         self.counterfactual = CounterfactualToggle()                # L14-6
         self.voice_pipeline = VoiceInputPipeline()                  # L14-9
+
+        # ── P2 CLUSTER 5: L4/L5 AI & Safety ──
+        self.self_correction = SelfCorrectionRAGLoop()             # L4-5
+        self.debate_protocol = MultiAgentDebateProtocol()          # L4-6
+        self.red_team = AdversarialRedTeamAgent()                  # L4-7
+        self.abductive = AbductiveReasoningEngine()                # L4-8
+        self.knowledge_graph = ClinicalKnowledgeGraphEngine()      # L4-10
+        self.conformal = ConformalPredictionEngine()                # L5-5
+        self.triangulation = SourceTriangulationGate()             # L5-8
+        self.predictive_alerts = PredictiveClinicalAlertGenerator() # L5-15
+        self.trajectory = PatientTrajectoryAnalyzer()              # L5-16
 
     def process(self, query: ClinicalQuery) -> CURANIQResponse:
         """
@@ -1051,6 +1077,18 @@ class CURANIQPipeline:
                 f"Resolution: {conflict.resolution_strategy[:80]}"
             )
 
+        # L5-15: Predictive Clinical Alerts
+        predictive = self.predictive_alerts.assess_risks(
+            patient_age=patient_age,
+            conditions=patient_conditions,
+            drugs=drugs_mentioned,
+        )
+        for pa in predictive:
+            specialty_alerts.append(
+                f"PREDICTIVE [{pa.probability}]: {pa.risk_description} — "
+                f"Horizon: {pa.time_horizon}. Action: {pa.recommended_action[:80]}"
+            )
+
         # L1-13: WHO Essential Medicines List check
         eml_status = self.who_eml.get_eml_status(drugs_mentioned)
         for drug, is_eml in eml_status.items():
@@ -1372,6 +1410,23 @@ class CURANIQPipeline:
             )
         except Exception as prov_err:
             logger.warning("L9-3 provenance graph build failed (non-blocking): %s", prov_err)
+
+        # ═══════════════════════════════════════════════════════════════
+        # STAGE 13: L4-10 Knowledge Graph Extraction (non-blocking)
+        # Extract drug-condition-evidence triples for incremental KG build.
+        # ═══════════════════════════════════════════════════════════════
+        try:
+            self.knowledge_graph.extract_from_pipeline(
+                drugs=drugs_mentioned,
+                conditions=patient_conditions,
+                ddi_results=cql_results.get("ddi_results", []),
+                evidence_objects=[
+                    {"title": e.title, "source": getattr(e, 'source_type', '')}
+                    for e in evidence_pack.objects
+                ],
+            )
+        except Exception:
+            pass  # Non-blocking
 
         return CURANIQResponse(
             query_id=query.query_id,

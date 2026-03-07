@@ -1,0 +1,162 @@
+{
+  "_metadata": {
+    "source": "Published clinical risk prediction rules with citations",
+    "version": "2024",
+    "total_entries": 7
+  },
+  "cascades": [
+    {
+      "triggers": {
+        "conditions": [
+          "ckd",
+          "chronic kidney",
+          "renal impairment"
+        ],
+        "drugs": [
+          "ibuprofen",
+          "naproxen",
+          "diclofenac",
+          "ketorolac",
+          "celecoxib",
+          "meloxicam",
+          "indomethacin"
+        ]
+      },
+      "risk": "Acute Kidney Injury",
+      "probability": "high",
+      "horizon": "48-72 hours",
+      "action": "Discontinue NSAID. Monitor creatinine daily. Ensure hydration.",
+      "source": "KDIGO AKI 2012; Dreischulte BMJ 2015 (triple whammy)"
+    },
+    {
+      "triggers": {
+        "conditions": [
+          "ckd",
+          "heart failure"
+        ],
+        "drugs_all": [
+          "enalapril,lisinopril,ramipril,losartan,valsartan",
+          "spironolactone,amiloride,triamterene",
+          "ibuprofen,naproxen,diclofenac"
+        ]
+      },
+      "risk": "Triple Whammy AKI (ACEi/ARB + K-sparing + NSAID)",
+      "probability": "very_high",
+      "horizon": "24-48 hours",
+      "action": "STOP NSAID immediately. Monitor K+ and creatinine urgently. This combination carries highest AKI risk.",
+      "source": "Dreischulte T et al. BMJ 2015;351:h5955 (triple whammy)"
+    },
+    {
+      "triggers": {
+        "age_above": 65,
+        "drugs_any_2": [
+          "amiodarone",
+          "azithromycin",
+          "ciprofloxacin",
+          "haloperidol",
+          "ondansetron",
+          "methadone",
+          "escitalopram",
+          "citalopram",
+          "sotalol",
+          "droperidol",
+          "chlorpromazine",
+          "erythromycin",
+          "clarithromycin",
+          "fluconazole",
+          "domperidone"
+        ]
+      },
+      "risk": "QT Prolongation / Torsades de Pointes",
+      "probability": "moderate",
+      "horizon": "24-48 hours",
+      "action": "ECG before and after starting. Monitor QTc. Consider alternative.",
+      "source": "CredibleMeds.org; Tisdale et al. Circ Arrhythm Electrophysiol 2013"
+    },
+    {
+      "triggers": {
+        "age_above": 75,
+        "drugs_any_2": [
+          "diazepam",
+          "zolpidem",
+          "alprazolam",
+          "lorazepam",
+          "temazepam",
+          "doxazosin",
+          "prazosin",
+          "furosemide",
+          "oxycodone",
+          "tramadol",
+          "codeine",
+          "morphine",
+          "amitriptyline",
+          "quetiapine",
+          "haloperidol"
+        ]
+      },
+      "risk": "Fall with fracture",
+      "probability": "high",
+      "horizon": "Ongoing",
+      "action": "Falls risk assessment. Review sedating medications. Deprescribing review. Bone health check.",
+      "source": "AGS Beers 2023; NICE CG161"
+    },
+    {
+      "triggers": {
+        "conditions": [
+          "diabetes",
+          "type 2 diabetes"
+        ],
+        "drugs": [
+          "insulin",
+          "glibenclamide",
+          "glimepiride"
+        ],
+        "age_above": 70
+      },
+      "risk": "Severe hypoglycemia",
+      "probability": "moderate",
+      "horizon": "Ongoing",
+      "action": "Relaxed HbA1c target (<8.0% per ADA). Consider less hypoglycemia-prone agents. Educate on hypo recognition.",
+      "source": "ADA 2024; NICE NG28; ACCORD trial"
+    },
+    {
+      "triggers": {
+        "conditions": [
+          "liver cirrhosis",
+          "hepatic impairment"
+        ],
+        "drugs": [
+          "paracetamol",
+          "methotrexate",
+          "isoniazid",
+          "valproic_acid",
+          "amiodarone"
+        ]
+      },
+      "risk": "Drug-induced hepatotoxicity / Liver failure decompensation",
+      "probability": "high",
+      "horizon": "Days to weeks",
+      "action": "Reduce paracetamol to max 2g/day. Avoid hepatotoxic drugs if possible. Monitor LFTs weekly.",
+      "source": "EASL Cirrhosis 2018; ACG Drug-Induced Liver Injury 2014"
+    },
+    {
+      "triggers": {
+        "conditions": [
+          "asthma"
+        ],
+        "drugs": [
+          "propranolol",
+          "carvedilol",
+          "nadolol",
+          "timolol",
+          "sotalol"
+        ]
+      },
+      "risk": "Bronchospasm / Asthma exacerbation",
+      "probability": "high",
+      "horizon": "Hours",
+      "action": "AVOID non-selective beta-blockers in asthma. Use cardioselective (bisoprolol) if beta-blocker essential.",
+      "source": "BTS/SIGN Asthma 2019; GINA 2024"
+    }
+  ]
+}
