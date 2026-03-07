@@ -99,7 +99,8 @@ from curaniq.layers.L5_safety_gates.safety_gate_pipeline import (
 from curaniq.layers.L6_security.llm_client import MultiLLMClient
 from curaniq.layers.L6_security.phi_scrubber import PHIScrubber
 from curaniq.layers.L11_local_reality.drug_availability import LocalDrugAvailabilityFilter
-from curaniq.layers.L14_interaction.session_memory import ClinicalSessionMemory, AssumptionLedger, OutputExfiltrationScanner, resolve_drug_name, get_search_synonyms
+from curaniq.layers.L14_interaction.session_memory import ClinicalSessionMemory, AssumptionLedger
+from curaniq.layers.L6_security.phi_scrubber import OutputExfiltrationScanner
 from curaniq.safety.safety_gates import SafetyGateSuiteRunner
 
 
@@ -685,7 +686,7 @@ class CURANIQPipeline:
         normalized = self.input_normalizer.normalize(text)
         return normalized.detected_foods
 
-        def _extract_monitoring(self, cql_results: dict, safety_suite, drugs: list[str]) -> list[str]:
+    def _extract_monitoring(self, cql_results: dict, safety_suite, drugs: list[str]) -> list[str]:
         """Generate monitoring requirements from CQL results and safety flags."""
         monitoring: list[str] = []
 
