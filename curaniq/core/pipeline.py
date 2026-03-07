@@ -203,6 +203,25 @@ from curaniq.layers.L4_ai_model.cross_encoder import CrossEncoderReranker
 # ── NEW: L8-8 Medication Coverage Scope Fence ──
 from curaniq.layers.L8_interface.coverage_scope import MedicationCoverageScopeFence
 
+# ── P2 CLUSTER 1: L3 Clinical Specialty Engines (12 modules) ──
+from curaniq.layers.L3_safety_kernel.geriatric_renal_anticoag_tdm import (
+    GeriatricSafetyEngine,         # L3-8
+    DedicatedRenalDosingEngine,    # L3-14
+    AnticoagulationEngine,         # L3-11
+    TDMPKPDEngine,                 # L3-18
+)
+from curaniq.layers.L3_safety_kernel.specialty_engines_p2 import (
+    AntimicrobialStewardshipEngine,  # L3-10
+    AWaReCategory,                    # For stewardship checks
+    OncologyChemoSafetyEngine,       # L3-13
+    PsychiatricSafetyEngine,         # L3-15
+    SubstanceUseSafetyEngine,        # L3-16
+    MultiMorbidityResolver,          # L3-19
+    VaccinationEngine,               # L3-20
+    FormalVerificationEngine,        # L3-3
+    TemporalLogicVerifier,           # L3-4
+)
+
 logger = logging.getLogger(__name__)
 
 
@@ -516,6 +535,20 @@ class CURANIQPipeline:
         self.clinician_trust = ClinicianTrustDashboard()
         self.roi_calculator = InstitutionalROICalculator()
 
+        # ── P2 CLUSTER 1: L3 Clinical Specialty Engines ──
+        self.geriatric_engine = GeriatricSafetyEngine()       # L3-8
+        self.renal_dosing = DedicatedRenalDosingEngine()       # L3-14
+        self.anticoag_engine = AnticoagulationEngine()         # L3-11
+        self.tdm_engine = TDMPKPDEngine()                      # L3-18
+        self.antimicrobial_engine = AntimicrobialStewardshipEngine()  # L3-10
+        self.oncology_engine = OncologyChemoSafetyEngine()     # L3-13
+        self.psych_engine = PsychiatricSafetyEngine()          # L3-15
+        self.substance_engine = SubstanceUseSafetyEngine()     # L3-16
+        self.multimorbidity = MultiMorbidityResolver()         # L3-19
+        self.vaccination_engine = VaccinationEngine()          # L3-20
+        self.formal_verifier = FormalVerificationEngine()      # L3-3
+        self.temporal_verifier = TemporalLogicVerifier()       # L3-4
+
     def process(self, query: ClinicalQuery) -> CURANIQResponse:
         """
         Execute the complete CURANIQ pipeline for a clinical query.
@@ -747,6 +780,116 @@ class CURANIQPipeline:
             drugs_mentioned=drugs_mentioned,
             food_herb_mentioned=food_herbs if food_herbs else None,
         )
+
+        # ═══════════════════════════════════════════════════════════════
+        # STAGE 6.5: L3 P2 Clinical Specialty Engines
+        # All deterministic. Run AFTER CQL kernel, BEFORE LLM.
+        # Results feed into the LLM prompt as additional safety context.
+        # ═══════════════════════════════════════════════════════════════
+        specialty_alerts: list[str] = []
+        patient = query.patient_context or _empty_patient()
+        patient_age = getattr(patient, 'age', None) or 0
+        patient_egfr = None
+        if patient.renal:
+            patient_egfr = getattr(patient.renal, 'egfr_ml_min', None)
+
+        # L3-8: Geriatric Safety (Beers, STOPP/START, ACB)
+        if patient_age >= 65:
+            geriatric_alerts = self.geriatric_engine.assess(
+                patient_age=patient_age,
+                drugs=drugs_mentioned,
+                egfr=patient_egfr,
+            )
+            for ga in geriatric_alerts:
+                specialty_alerts.append(
+                    f"GERIATRIC [{ga.category.value}]: {ga.drug} — {ga.rationale[:100]}. "
+                    f"Recommendation: {ga.recommendation[:100]}"
+                )
+
+        # L3-14: Dedicated Renal Dosing (CKD-stage-specific)
+        if patient_egfr and patient_egfr < 60:
+            for drug in drugs_mentioned:
+                renal_adj = self.renal_dosing.get_adjustment(
+                    drug, patient_egfr,
+                    on_dialysis=getattr(patient.renal, 'on_dialysis', False) if patient.renal else False,
+                )
+                if renal_adj and renal_adj.action != "normal":
+                    specialty_alerts.append(
+                        f"RENAL [{renal_adj.ckd_stage.value}]: {drug} — {renal_adj.action}. "
+                        f"Dose: {renal_adj.adjusted_dose}. {renal_adj.monitoring}"
+                    )
+
+        # L3-15: Psychiatric Safety (serotonin syndrome risk)
+        psych_alerts = self.psych_engine.check_serotonin_syndrome_risk(drugs_mentioned)
+        for pa in psych_alerts:
+            specialty_alerts.append(
+                f"PSYCHIATRIC [{pa.severity}]: {pa.alert_type} — {pa.message[:120]}"
+            )
+
+        # L3-10: Antimicrobial Stewardship (AWaRe classification)
+        for drug in drugs_mentioned:
+            abx_result = self.antimicrobial_engine.assess(drug, indication=english_text)
+            if abx_result.aware_category == AWaReCategory.RESERVE:
+                specialty_alerts.append(
+                    f"STEWARDSHIP [RESERVE]: {drug} — {abx_result.recommendation[:120]}"
+                )
+
+        # L3-19: Multi-Morbidity Conflicts
+        patient_conditions = []
+        if hasattr(patient, 'conditions') and patient.conditions:
+            patient_conditions = patient.conditions
+        if patient_conditions:
+            mm_conflicts = self.multimorbidity.check_conflicts(patient_conditions, drugs_mentioned)
+            for conflict in mm_conflicts:
+                specialty_alerts.append(
+                    f"MULTI-MORBIDITY: {conflict['drug']} for {conflict['condition_treated']} "
+                    f"conflicts with {conflict['condition_harmed']} — {conflict['recommendation'][:100]}"
+                )
+
+        # L3-11: Anticoagulation Engine (when anticoagulants detected)
+        _anticoag_drugs = {"warfarin","rivaroxaban","apixaban","dabigatran","edoxaban","enoxaparin","heparin"}
+        anticoag_present = [d for d in drugs_mentioned if d.lower() in _anticoag_drugs]
+        for ac_drug in anticoag_present:
+            rev = self.anticoag_engine.get_reversal(ac_drug)
+            if rev:
+                specialty_alerts.append(
+                    f"ANTICOAG: {ac_drug} reversal agent: {rev['agent'][:80]}. Onset: {rev['onset']}"
+                )
+            doac_dose = self.anticoag_engine.get_doac_dose(
+                ac_drug, "af", crcl=patient_egfr,
+                age=patient_age, weight_kg=getattr(patient, 'weight_kg', None),
+            )
+            if doac_dose:
+                specialty_alerts.append(
+                    f"ANTICOAG DOSING: {ac_drug} — {doac_dose.get('dose', '')}. "
+                    f"Source: {doac_dose.get('source', '')}"
+                )
+
+        # L3-18: TDM Engine (when narrow therapeutic index drugs detected)
+        _tdm_drugs = {"vancomycin","gentamicin","lithium","digoxin","phenytoin",
+                       "carbamazepine","valproic_acid","tacrolimus","cyclosporine"}
+        tdm_present = [d for d in drugs_mentioned if d.lower().replace(" ","_") in _tdm_drugs]
+        for tdm_drug in tdm_present:
+            if patient_egfr:
+                adj_t12 = self.tdm_engine.estimate_adjusted_half_life(tdm_drug, patient_egfr)
+                if adj_t12:
+                    specialty_alerts.append(
+                        f"TDM: {tdm_drug} estimated t1/2 = {adj_t12}h at eGFR {patient_egfr}. "
+                        "Dose interval adjustment may be needed."
+                    )
+
+        # L3-16: Substance Use Safety (when SUD medications detected)
+        _sud_drugs = {"methadone","buprenorphine","naltrexone","naloxone","disulfiram","acamprosate"}
+        sud_present = [d for d in drugs_mentioned if d.lower() in _sud_drugs]
+        if sud_present:
+            sud_alerts = self.substance_engine.assess_combinations(drugs_mentioned)
+            for sa in sud_alerts:
+                specialty_alerts.append(
+                    f"SUBSTANCE USE [{sa['severity']}]: {sa['drugs']} — {sa['message'][:120]}"
+                )
+
+        # Inject specialty alerts into CQL results for downstream use
+        cql_results["specialty_alerts"] = specialty_alerts
 
         # ═══════════════════════════════════════════════════════════════
         # STAGE 7: L4-2 Constrained Generator (LLM with evidence lock)
