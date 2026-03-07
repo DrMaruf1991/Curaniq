@@ -26,6 +26,13 @@ from typing import Any, Optional
 
 logger = logging.getLogger(__name__)
 
+# Cost monitoring — integrated, not separate
+try:
+    from curaniq.layers.L10_testing.cost_monitor import LLMCostMonitor
+    _COST_MONITOR_AVAILABLE = True
+except ImportError:
+    _COST_MONITOR_AVAILABLE = False
+
 
 @dataclass
 class LLMResponse:
@@ -71,6 +78,7 @@ class MultiLLMClient:
             providers: List of (config, client_instance) tuples in priority order.
         """
         self._providers = providers
+        self._cost_monitor = LLMCostMonitor() if _COST_MONITOR_AVAILABLE else None
 
     @classmethod
     def from_environment(cls) -> Optional["MultiLLMClient"]:
@@ -157,6 +165,18 @@ class MultiLLMClient:
         Generate a response using failover chain.
         Tries each provider in order. Returns first successful response.
         """
+        # L10-10: Check budget BEFORE calling LLM
+        if self._cost_monitor:
+            budget = self._cost_monitor.check_budget()
+            if budget.exceeded:
+                return LLMResponse(
+                    text="",
+                    provider="none",
+                    model="none",
+                    success=False,
+                    error=f"BUDGET EXCEEDED: {budget.alert_message} Query refused to control costs.",
+                )
+
         errors: list[str] = []
 
         for config, client in self._providers:
@@ -184,6 +204,17 @@ class MultiLLMClient:
                     continue
 
                 response.latency_ms = (time.perf_counter() - start) * 1000
+
+                # L10-10: Auto-record cost
+                if self._cost_monitor:
+                    self._cost_monitor.after_call(
+                        provider=config.name,
+                        model=model,
+                        input_tokens=response.input_tokens,
+                        output_tokens=response.output_tokens,
+                        latency_ms=response.latency_ms,
+                    )
+
                 logger.info(
                     f"LLM response from {config.name}/{model} "
                     f"in {response.latency_ms:.0f}ms "
@@ -263,6 +294,13 @@ class MultiLLMClient:
             input_tokens=getattr(response.usage_metadata, "prompt_token_count", 0) if hasattr(response, "usage_metadata") else 0,
             output_tokens=getattr(response.usage_metadata, "candidates_token_count", 0) if hasattr(response, "usage_metadata") else 0,
         )
+
+    @property
+    def cost_summary(self) -> dict:
+        """Current month cost summary."""
+        if self._cost_monitor:
+            return self._cost_monitor.get_summary()
+        return {}
 
     @property
     def provider_names(self) -> list[str]:
