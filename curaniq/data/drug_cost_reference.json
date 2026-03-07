@@ -1,0 +1,50 @@
+{
+  "_metadata": {
+    "source": "WHO/HAI Medicine Prices; Uzbekistan DMED registry; BNF pricing",
+    "version": "2024",
+    "total_entries": 15
+  },
+  "reference_prices_usd": {
+    "metformin_500mg": 0.02,
+    "amlodipine_5mg": 0.03,
+    "atorvastatin_20mg": 0.04,
+    "omeprazole_20mg": 0.05,
+    "amoxicillin_500mg": 0.04,
+    "ibuprofen_400mg": 0.02,
+    "paracetamol_500mg": 0.01,
+    "losartan_50mg": 0.04,
+    "hydrochlorothiazide_25mg": 0.01,
+    "ciprofloxacin_500mg": 0.04,
+    "azithromycin_500mg": 0.1,
+    "salbutamol_inhaler": 1.5,
+    "insulin_glargine_100iu_ml": 8.0,
+    "empagliflozin_10mg": 2.5,
+    "rivaroxaban_20mg": 3.0
+  },
+  "exchange_rates_per_usd": {
+    "UZS": 12750,
+    "RUB": 92,
+    "KZT": 460,
+    "EUR": 0.92,
+    "GBP": 0.79
+  },
+  "cost_tiers": {
+    "low": {
+      "max_usd_per_month": 5,
+      "label": "Low cost (<$5/mo)"
+    },
+    "moderate": {
+      "max_usd_per_month": 25,
+      "label": "Moderate ($5-25/mo)"
+    },
+    "high": {
+      "max_usd_per_month": 100,
+      "label": "High ($25-100/mo)"
+    },
+    "very_high": {
+      "max_usd_per_month": 99999,
+      "label": "Very high (>$100/mo)"
+    }
+  },
+  "source_note": "MSH International Drug Price Indicator Guide; WHO/HAI methodology"
+}

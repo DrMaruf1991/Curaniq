@@ -1,0 +1,89 @@
+{
+  "_metadata": {
+    "source": "HL7 FHIR Gravity Project; ICD-10 Z-codes; LOINC social determinants",
+    "version": "2024",
+    "total_entries": 6
+  },
+  "domains": {
+    "food_insecurity": {
+      "screening_loinc": "88122-7",
+      "icd10_codes": [
+        "Z59.41",
+        "Z59.48"
+      ],
+      "fhir_profile": "http://hl7.org/fhir/us/sdoh-clinicalcare/StructureDefinition/SDOHCC-Condition",
+      "drug_implications": [
+        "Irregular meals affect insulin timing",
+        "Cannot store temperature-sensitive drugs",
+        "Malnutrition affects drug metabolism"
+      ],
+      "source": "Gravity Project; ADA 2024 Standards of Care §1.6"
+    },
+    "housing_instability": {
+      "screening_loinc": "71802-3",
+      "icd10_codes": [
+        "Z59.0",
+        "Z59.1",
+        "Z59.8"
+      ],
+      "fhir_profile": "http://hl7.org/fhir/us/sdoh-clinicalcare/StructureDefinition/SDOHCC-Condition",
+      "drug_implications": [
+        "Cannot store medications safely",
+        "No refrigeration for biologics/insulin",
+        "Adherence barriers",
+        "No stable address for follow-up"
+      ],
+      "source": "Gravity Project; NASEM 2019"
+    },
+    "transportation_barriers": {
+      "screening_loinc": "93030-3",
+      "icd10_codes": [
+        "Z59.82"
+      ],
+      "drug_implications": [
+        "Cannot attend TDM blood draws",
+        "Pharmacy access limited",
+        "Missed infusion appointments"
+      ],
+      "source": "Gravity Project"
+    },
+    "financial_strain": {
+      "screening_loinc": "76513-1",
+      "icd10_codes": [
+        "Z59.6",
+        "Z59.7"
+      ],
+      "drug_implications": [
+        "Cost-driven non-adherence",
+        "Splitting doses to extend supply",
+        "Using expired medications",
+        "Prefer generic over brand"
+      ],
+      "source": "Gravity Project; WHO Essential Medicines rationale"
+    },
+    "health_literacy": {
+      "screening_loinc": "93037-8",
+      "icd10_codes": [],
+      "drug_implications": [
+        "May not understand dosing instructions",
+        "Confuse similar-sounding drugs",
+        "Cannot read medication labels",
+        "Need pictogram-based education"
+      ],
+      "source": "AHRQ Health Literacy; NICE shared decision-making"
+    },
+    "intimate_partner_violence": {
+      "screening_loinc": "76499-3",
+      "icd10_codes": [
+        "Z63.0",
+        "T74.11"
+      ],
+      "drug_implications": [
+        "Medication may be controlled by abuser",
+        "Cannot safely store contraceptives",
+        "May need discreet packaging"
+      ],
+      "source": "USPSTF IPV Screening 2018; Gravity Project"
+    }
+  }
+}

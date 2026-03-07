@@ -1,0 +1,85 @@
+{
+  "_metadata": {
+    "source": "ISO 13485:2016; IEC 62304:2006+A1; FDA SaMD guidance; MDR 2017/745",
+    "version": "2024",
+    "total_entries": 4
+  },
+  "document_types": {
+    "iec_62304_software_plan": {
+      "title": "Software Development Plan (IEC 62304 §5.1)",
+      "sections": [
+        "Purpose and Scope",
+        "Software Safety Classification",
+        "Development Process",
+        "Software Items and Architecture",
+        "Configuration Management",
+        "Problem Resolution",
+        "Verification and Validation Strategy"
+      ],
+      "standard": "IEC 62304:2006+A1:2015",
+      "auto_fields": [
+        "software_version",
+        "safety_classification",
+        "architecture_modules_count",
+        "test_coverage"
+      ]
+    },
+    "risk_management_report": {
+      "title": "Risk Management Report (ISO 14971 §9)",
+      "sections": [
+        "Scope",
+        "Risk Analysis",
+        "Risk Evaluation",
+        "Risk Control Measures",
+        "Residual Risk Evaluation",
+        "Risk-Benefit Analysis",
+        "Completeness Review"
+      ],
+      "standard": "ISO 14971:2019",
+      "auto_fields": [
+        "total_risks_identified",
+        "risks_mitigated",
+        "residual_risk_acceptable"
+      ]
+    },
+    "clinical_evaluation_report": {
+      "title": "Clinical Evaluation Report (MDR Annex XIV)",
+      "sections": [
+        "Device Description",
+        "Clinical Background",
+        "Literature Search Protocol",
+        "Clinical Data Analysis",
+        "Performance Data",
+        "Clinical Benefits",
+        "Residual Risks",
+        "Benefit-Risk Determination",
+        "Post-Market Surveillance Plan"
+      ],
+      "standard": "MEDDEV 2.7/1 Rev 4; MDR 2017/745 Annex XIV",
+      "auto_fields": [
+        "clinical_claims",
+        "evidence_count",
+        "benchmark_results"
+      ]
+    },
+    "fda_510k_summary": {
+      "title": "510(k) Premarket Notification Summary",
+      "sections": [
+        "Submitter Information",
+        "Device Name and Classification",
+        "Predicate Device",
+        "Device Description",
+        "Intended Use",
+        "Technological Characteristics",
+        "Performance Data",
+        "Substantial Equivalence Determination"
+      ],
+      "standard": "21 CFR 807.87; FDA SaMD N41",
+      "auto_fields": [
+        "device_classification",
+        "predicate_device",
+        "performance_metrics"
+      ]
+    }
+  }
+}

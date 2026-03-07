@@ -292,6 +292,25 @@ from curaniq.layers.L13_federated.federated_network import (
     RWEAggregationEngine,          # L13-4
 )
 
+# ── FINAL 13: Complete 181/181 ──
+from curaniq.layers.final_13.infra_evidence_ai import (
+    PlatformInfrastructureManager,  # L0-6
+    EvidenceRedundancyCollapser,    # L2-13
+    CausalInferenceEngine,          # L4-9
+    DICOMIntegritySentinel,         # L6-4
+    APIGatewayManager,              # L7-15
+    RegulatorySubmissionGenerator,  # L9-6
+)
+from curaniq.layers.final_13.clinical_local_interaction import (
+    SDOHGravityIntegration,         # L7-5
+    ClinicalDocumentationAssistant, # L7-12
+    DischargePlanningModule,        # L7-13
+    SupplyChainPrescribing,         # L11-2
+    CurrencyCostEngine,             # L11-3
+    AmbientConsultationMonitor,     # L14-10
+    ZeroClickProactiveCDS,          # L14-11
+)
+
 # ── P2 CLUSTER 1: L3 Clinical Specialty Engines (12 modules) ──
 from curaniq.layers.L3_safety_kernel.geriatric_renal_anticoag_tdm import (
     GeriatricSafetyEngine,         # L3-8
@@ -743,6 +762,21 @@ class CURANIQPipeline:
         self.safety_signal_network = FederatedSafetySignalNetwork()    # L13-3
         self.rwe_aggregation = RWEAggregationEngine()              # L13-4
 
+        # ── FINAL 13: Complete 181/181 ──
+        self.platform_infra = PlatformInfrastructureManager()      # L0-6
+        self.redundancy_collapser = EvidenceRedundancyCollapser()   # L2-13
+        self.causal_inference = CausalInferenceEngine()             # L4-9
+        self.dicom_sentinel = DICOMIntegritySentinel()              # L6-4
+        self.api_gateway = APIGatewayManager()                      # L7-15
+        self.regulatory_gen = RegulatorySubmissionGenerator()       # L9-6
+        self.sdoh = SDOHGravityIntegration()                        # L7-5
+        self.clinical_docs = ClinicalDocumentationAssistant()       # L7-12
+        self.discharge_planning = DischargePlanningModule()         # L7-13
+        self.supply_chain = SupplyChainPrescribing()                # L11-2
+        self.cost_engine = CurrencyCostEngine()                     # L11-3
+        self.ambient_monitor = AmbientConsultationMonitor()         # L14-10
+        self.proactive_cds = ZeroClickProactiveCDS()                # L14-11
+
     def process(self, query: ClinicalQuery) -> CURANIQResponse:
         """
         Execute the complete CURANIQ pipeline for a clinical query.
@@ -860,6 +894,22 @@ class CURANIQPipeline:
                 # Log expansion suggestions for retriever to use
                 for exp in expansions[:3]:
                     logger.info("Source expansion: %s — %s", exp["strategy"], exp["detail"])
+
+        # ═══════════════════════════════════════════════════════════════
+        # STAGE 5.165: L2-13 Evidence Redundancy Collapse
+        # Collapse semantically redundant evidence before reranking.
+        # ═══════════════════════════════════════════════════════════════
+        if len(evidence_pack.objects) > 5:
+            collapsed = self.redundancy_collapser.collapse([
+                {"title": e.title, "snippet": e.snippet, "doi": getattr(e, 'doi', ''),
+                 "quality_score": getattr(e, 'quality_score', 0.5),
+                 "evidence_id": str(e.evidence_id)}
+                for e in evidence_pack.objects
+            ])
+            # Keep only the representative evidence objects
+            kept_ids = {c.get("evidence_id") for c in collapsed}
+            evidence_pack.objects = [e for e in evidence_pack.objects
+                                      if str(e.evidence_id) in kept_ids]
 
         # ═══════════════════════════════════════════════════════════════
         # STAGE 5.17: L4-11 Cross-Encoder Reranking
