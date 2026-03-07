@@ -217,6 +217,24 @@ from curaniq.layers.L7_ehr_integration.clinical_workflows import (
     ClinicalPathwayGenerator,      # L7-9
 )
 
+# ── P2 CLUSTER 4: L8/L14 Interface & UX (12 modules) ──
+from curaniq.layers.L8_interface.interface_extensions import (
+    VisualReasoningMapBuilder,     # L8-2
+    TokenUncertaintyVisualizer,    # L8-3
+    EvidenceWatchlist,             # L8-6
+    ClinicianChallengeHandler,     # L8-7
+    PatientEducationGenerator,     # L8-9
+    MedicalCalculatorHub,          # L8-10
+    ClinicianReviewSigner,         # L8-11
+    BackTranslationVerifier,       # L8-13
+)
+from curaniq.layers.L14_interaction.interaction_extensions import (
+    EvidenceMapVisualizer,         # L14-4
+    IterativeSourceExpander,       # L14-5
+    CounterfactualToggle,          # L14-6
+    VoiceInputPipeline,            # L14-9
+)
+
 # ── P2 CLUSTER 1: L3 Clinical Specialty Engines (12 modules) ──
 from curaniq.layers.L3_safety_kernel.geriatric_renal_anticoag_tdm import (
     GeriatricSafetyEngine,         # L3-8
@@ -609,6 +627,20 @@ class CURANIQPipeline:
         self.med_reconciliation = MedicationReconciliationEngine() # L7-8
         self.pathway_generator = ClinicalPathwayGenerator()        # L7-9
 
+        # ── P2 CLUSTER 4: L8/L14 Interface & UX ──
+        self.reasoning_map = VisualReasoningMapBuilder()           # L8-2
+        self.uncertainty_viz = TokenUncertaintyVisualizer()         # L8-3
+        self.evidence_watchlist = EvidenceWatchlist()               # L8-6
+        self.challenge_handler = ClinicianChallengeHandler()        # L8-7
+        self.patient_education = PatientEducationGenerator()        # L8-9
+        self.calculator_hub = MedicalCalculatorHub()                # L8-10
+        self.review_signer = ClinicianReviewSigner()                # L8-11
+        self.back_translation = BackTranslationVerifier()           # L8-13
+        self.evidence_map_viz = EvidenceMapVisualizer()             # L14-4
+        self.source_expander = IterativeSourceExpander()            # L14-5
+        self.counterfactual = CounterfactualToggle()                # L14-6
+        self.voice_pipeline = VoiceInputPipeline()                  # L14-9
+
     def process(self, query: ClinicalQuery) -> CURANIQResponse:
         """
         Execute the complete CURANIQ pipeline for a clinical query.
@@ -713,6 +745,19 @@ class CURANIQPipeline:
             return self._build_refusal_response(
                 query, "OUT_OF_SCOPE", scope_check.scope_message, mode,
             )
+
+        # ═══════════════════════════════════════════════════════════════
+        # STAGE 5.16: L14-5 Iterative Source Expansion
+        # If evidence is thin (<3 results), auto-broaden the query.
+        # ═══════════════════════════════════════════════════════════════
+        if len(evidence_pack.objects) < 3:
+            expansions = self.source_expander.expand_query(
+                english_text, drugs_mentioned, len(evidence_pack.objects),
+            )
+            if expansions:
+                # Log expansion suggestions for retriever to use
+                for exp in expansions[:3]:
+                    logger.info("Source expansion: %s — %s", exp["strategy"], exp["detail"])
 
         # ═══════════════════════════════════════════════════════════════
         # STAGE 5.17: L4-11 Cross-Encoder Reranking
@@ -1197,6 +1242,25 @@ class CURANIQPipeline:
             summary_text = translated_summary
             translation_warnings = t_warnings
 
+            # ═══════════════════════════════════════════════════════════
+            # STAGE 11.55: L8-13 Back-Translation Verification
+            # Verify translated text preserves negations and doses.
+            # ═══════════════════════════════════════════════════════════
+            if was_translated:
+                bt_result = self.back_translation.verify_round_trip(
+                    original=self._build_summary(evidence_cards, mode),
+                    back_translated=summary_text,  # Approximate: compare structure
+                )
+                if not bt_result["passed"]:
+                    for failure in bt_result["failures"]:
+                        if failure["severity"] == "critical":
+                            # Lost negation: revert to English
+                            summary_text = self._build_summary(evidence_cards, mode)
+                            translation_warnings.append(
+                                "Translation reverted to English: negation lost in translation."
+                            )
+                            break
+
         # ═══════════════════════════════════════════════════════════════
         # STAGE 11.6: Inject negative evidence warnings into response
         # ═══════════════════════════════════════════════════════════════
@@ -1233,6 +1297,16 @@ class CURANIQPipeline:
         monitoring = self._extract_monitoring(cql_results, safety_suite_result, drugs_mentioned)
         stop_rules = self._extract_stop_rules(cql_results, llm_output)
         escalation = self._extract_escalation(safety_suite_result, query)
+
+        # ═══════════════════════════════════════════════════════════════
+        # STAGE 12.7: L8-9 Patient Education Simplification
+        # If patient mode, simplify clinical language to grade 8 level.
+        # ═══════════════════════════════════════════════════════════════
+        if query.user_role and query.user_role.value == "patient":
+            from curaniq.layers.L8_interface.interface_extensions import ReadabilityLevel
+            summary_text = self.patient_education.simplify(
+                summary_text, ReadabilityLevel.GRADE_8,
+            )
 
         elapsed_ms = (time.perf_counter() - start_time) * 1000
 

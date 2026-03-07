@@ -1,0 +1,365 @@
+{
+  "_metadata": {
+    "source": "Published validated clinical calculators",
+    "version": "2024",
+    "note": "Each calculator has: formula (Python-evaluable), inputs, units, interpretation, source",
+    "total_entries": 11
+  },
+  "calculators": {
+    "bmi": {
+      "full_name": "Body Mass Index",
+      "inputs": {
+        "weight_kg": "float",
+        "height_m": "float"
+      },
+      "formula": "weight_kg / (height_m ** 2)",
+      "unit": "kg/m2",
+      "interpretation": [
+        {
+          "range": [
+            0,
+            18.5
+          ],
+          "label": "Underweight"
+        },
+        {
+          "range": [
+            18.5,
+            25.0
+          ],
+          "label": "Normal weight"
+        },
+        {
+          "range": [
+            25.0,
+            30.0
+          ],
+          "label": "Overweight"
+        },
+        {
+          "range": [
+            30.0,
+            35.0
+          ],
+          "label": "Obesity class I"
+        },
+        {
+          "range": [
+            35.0,
+            40.0
+          ],
+          "label": "Obesity class II"
+        },
+        {
+          "range": [
+            40.0,
+            999
+          ],
+          "label": "Obesity class III (morbid)"
+        }
+      ],
+      "source": "WHO Global Database on BMI"
+    },
+    "bsa_dubois": {
+      "full_name": "Body Surface Area (DuBois Formula)",
+      "inputs": {
+        "height_cm": "float",
+        "weight_kg": "float"
+      },
+      "formula": "0.007184 * (height_cm ** 0.725) * (weight_kg ** 0.425)",
+      "unit": "m2",
+      "interpretation": [
+        {
+          "range": [
+            1.5,
+            2.2
+          ],
+          "label": "Normal adult range"
+        }
+      ],
+      "source": "DuBois D, DuBois EF. Arch Intern Med 1916;17:863-871"
+    },
+    "cockcroft_gault": {
+      "full_name": "Creatinine Clearance (Cockcroft-Gault)",
+      "inputs": {
+        "age": "int",
+        "weight_kg": "float",
+        "creatinine_umol": "float",
+        "sex": "str"
+      },
+      "formula": "((140 - age) * weight_kg) / (72 * (creatinine_umol / 88.4)) * (0.85 if sex == 'F' else 1.0)",
+      "unit": "mL/min",
+      "interpretation": [
+        {
+          "range": [
+            90,
+            999
+          ],
+          "label": "Normal"
+        },
+        {
+          "range": [
+            60,
+            90
+          ],
+          "label": "Mild impairment (CKD G2)"
+        },
+        {
+          "range": [
+            30,
+            60
+          ],
+          "label": "Moderate impairment (CKD G3)"
+        },
+        {
+          "range": [
+            15,
+            30
+          ],
+          "label": "Severe impairment (CKD G4)"
+        },
+        {
+          "range": [
+            0,
+            15
+          ],
+          "label": "Kidney failure (CKD G5)"
+        }
+      ],
+      "source": "Cockcroft DW, Gault MH. Nephron 1976;16(1):31-41"
+    },
+    "ckd_epi_2021": {
+      "full_name": "eGFR (CKD-EPI 2021 without race)",
+      "inputs": {
+        "age": "int",
+        "creatinine_umol": "float",
+        "sex": "str"
+      },
+      "formula_note": "CKD-EPI 2021 race-free equation. Complex — use lookup table or dedicated function.",
+      "unit": "mL/min/1.73m2",
+      "interpretation": [
+        {
+          "range": [
+            90,
+            999
+          ],
+          "label": "G1: Normal or high"
+        },
+        {
+          "range": [
+            60,
+            90
+          ],
+          "label": "G2: Mildly decreased"
+        },
+        {
+          "range": [
+            45,
+            60
+          ],
+          "label": "G3a: Mildly to moderately decreased"
+        },
+        {
+          "range": [
+            30,
+            45
+          ],
+          "label": "G3b: Moderately to severely decreased"
+        },
+        {
+          "range": [
+            15,
+            30
+          ],
+          "label": "G4: Severely decreased"
+        },
+        {
+          "range": [
+            0,
+            15
+          ],
+          "label": "G5: Kidney failure"
+        }
+      ],
+      "source": "Inker LA et al. NEJM 2021;385(19):1737-1749"
+    },
+    "corrected_calcium": {
+      "full_name": "Corrected Calcium for Albumin",
+      "inputs": {
+        "total_calcium_mmol": "float",
+        "albumin_g_l": "float"
+      },
+      "formula": "total_calcium_mmol + 0.02 * (40 - albumin_g_l)",
+      "unit": "mmol/L",
+      "interpretation": [
+        {
+          "range": [
+            0,
+            2.2
+          ],
+          "label": "Hypocalcemia"
+        },
+        {
+          "range": [
+            2.2,
+            2.6
+          ],
+          "label": "Normal"
+        },
+        {
+          "range": [
+            2.6,
+            999
+          ],
+          "label": "Hypercalcemia"
+        }
+      ],
+      "source": "Payne et al. Br Med J 1973;4(5893):643-646"
+    },
+    "anion_gap": {
+      "full_name": "Anion Gap",
+      "inputs": {
+        "sodium_mmol": "float",
+        "chloride_mmol": "float",
+        "bicarbonate_mmol": "float"
+      },
+      "formula": "sodium_mmol - (chloride_mmol + bicarbonate_mmol)",
+      "unit": "mmol/L",
+      "interpretation": [
+        {
+          "range": [
+            8,
+            12
+          ],
+          "label": "Normal (without albumin correction)"
+        },
+        {
+          "range": [
+            12,
+            999
+          ],
+          "label": "Elevated — consider HAGMA (DKA, lactic acidosis, toxins, renal failure)"
+        }
+      ],
+      "source": "Emmett M, Narins RG. Medicine 1977;56(1):38-54; Berend K et al. NEJM 2014"
+    },
+    "corrected_phenytoin": {
+      "full_name": "Sheiner-Tozer Corrected Phenytoin Level",
+      "inputs": {
+        "measured_level_mg_l": "float",
+        "albumin_g_dl": "float"
+      },
+      "formula": "measured_level_mg_l / (0.2 * albumin_g_dl + 0.1)",
+      "unit": "mg/L",
+      "interpretation": [
+        {
+          "range": [
+            10,
+            20
+          ],
+          "label": "Therapeutic"
+        },
+        {
+          "range": [
+            0,
+            10
+          ],
+          "label": "Subtherapeutic"
+        },
+        {
+          "range": [
+            20,
+            999
+          ],
+          "label": "Supratherapeutic/toxic"
+        }
+      ],
+      "source": "Sheiner LB, Tozer TN. Clin Pharmacol Ther 1978;23(1):63-69; Winter's Clinical PK"
+    },
+    "ideal_body_weight": {
+      "full_name": "Ideal Body Weight (Devine Formula)",
+      "inputs": {
+        "height_cm": "float",
+        "sex": "str"
+      },
+      "formula": "(50 + 2.3 * ((height_cm / 2.54) - 60)) if sex == 'M' else (45.5 + 2.3 * ((height_cm / 2.54) - 60))",
+      "unit": "kg",
+      "interpretation": [],
+      "source": "Devine BJ. Drug Intell Clin Pharm 1974;8:650-655"
+    },
+    "adjusted_body_weight": {
+      "full_name": "Adjusted Body Weight (for obese dosing)",
+      "inputs": {
+        "actual_weight_kg": "float",
+        "ideal_weight_kg": "float"
+      },
+      "formula": "ideal_weight_kg + 0.4 * (actual_weight_kg - ideal_weight_kg)",
+      "unit": "kg",
+      "interpretation": [],
+      "source": "Winter's Clinical Pharmacokinetics; ASHP guidelines"
+    },
+    "map": {
+      "full_name": "Mean Arterial Pressure",
+      "inputs": {
+        "systolic": "float",
+        "diastolic": "float"
+      },
+      "formula": "diastolic + (systolic - diastolic) / 3",
+      "unit": "mmHg",
+      "interpretation": [
+        {
+          "range": [
+            0,
+            65
+          ],
+          "label": "Hypotension (below organ perfusion threshold)"
+        },
+        {
+          "range": [
+            65,
+            110
+          ],
+          "label": "Normal"
+        },
+        {
+          "range": [
+            110,
+            999
+          ],
+          "label": "Hypertensive"
+        }
+      ],
+      "source": "Standard physiological formula; SSC 2021 (MAP >65 target)"
+    },
+    "alvarado": {
+      "full_name": "Alvarado Score for Appendicitis",
+      "inputs_note": "Point-based: migration_of_pain(1), anorexia(1), nausea_vomiting(1), rif_tenderness(2), rebound(1), elevated_temp(1), leukocytosis(2), left_shift(1)",
+      "unit": "points",
+      "max_score": 10,
+      "interpretation": [
+        {
+          "range": [
+            0,
+            4
+          ],
+          "label": "Appendicitis unlikely"
+        },
+        {
+          "range": [
+            5,
+            6
+          ],
+          "label": "Possible appendicitis — observe/imaging"
+        },
+        {
+          "range": [
+            7,
+            10
+          ],
+          "label": "Probable appendicitis — surgical consultation"
+        }
+      ],
+      "source": "Alvarado A. Ann Emerg Med 1986;15(5):557-564"
+    }
+  }
+}

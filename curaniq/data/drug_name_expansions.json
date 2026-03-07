@@ -1,0 +1,178 @@
+{
+  "_metadata": {
+    "source": "International Nonproprietary Names (INN) and regional equivalents",
+    "version": "2024",
+    "note": "Used by L14-5 Iterative Source Expansion for query broadening",
+    "total_entries": 47
+  },
+  "expansions": {
+    "paracetamol": [
+      "acetaminophen",
+      "tylenol"
+    ],
+    "acetaminophen": [
+      "paracetamol"
+    ],
+    "salbutamol": [
+      "albuterol",
+      "ventolin"
+    ],
+    "albuterol": [
+      "salbutamol"
+    ],
+    "adrenaline": [
+      "epinephrine",
+      "epipen"
+    ],
+    "epinephrine": [
+      "adrenaline"
+    ],
+    "furosemide": [
+      "frusemide",
+      "lasix"
+    ],
+    "frusemide": [
+      "furosemide"
+    ],
+    "metoprolol": [
+      "metoprolol tartrate",
+      "metoprolol succinate",
+      "lopressor",
+      "betaloc"
+    ],
+    "atorvastatin": [
+      "lipitor"
+    ],
+    "omeprazole": [
+      "prilosec",
+      "losec"
+    ],
+    "pantoprazole": [
+      "protonix",
+      "controloc"
+    ],
+    "amoxicillin": [
+      "amoxil",
+      "augmentin"
+    ],
+    "ciprofloxacin": [
+      "cipro"
+    ],
+    "azithromycin": [
+      "zithromax",
+      "azitro"
+    ],
+    "metformin": [
+      "glucophage",
+      "siofor"
+    ],
+    "lisinopril": [
+      "zestril",
+      "prinivil"
+    ],
+    "losartan": [
+      "cozaar"
+    ],
+    "amlodipine": [
+      "norvasc"
+    ],
+    "warfarin": [
+      "coumadin"
+    ],
+    "clopidogrel": [
+      "plavix"
+    ],
+    "enoxaparin": [
+      "clexane",
+      "lovenox"
+    ],
+    "prednisolone": [
+      "prelone"
+    ],
+    "prednisone": [
+      "deltasone"
+    ],
+    "fluoxetine": [
+      "prozac"
+    ],
+    "sertraline": [
+      "zoloft"
+    ],
+    "escitalopram": [
+      "lexapro",
+      "cipralex"
+    ],
+    "diazepam": [
+      "valium"
+    ],
+    "ibuprofen": [
+      "advil",
+      "brufen",
+      "nurofen"
+    ],
+    "naproxen": [
+      "aleve",
+      "naprosyn"
+    ],
+    "insulin glargine": [
+      "lantus",
+      "toujeo"
+    ],
+    "insulin aspart": [
+      "novorapid",
+      "novolog"
+    ],
+    "semaglutide": [
+      "ozempic",
+      "wegovy",
+      "rybelsus"
+    ],
+    "empagliflozin": [
+      "jardiance"
+    ],
+    "dapagliflozin": [
+      "forxiga",
+      "farxiga"
+    ],
+    "rivaroxaban": [
+      "xarelto"
+    ],
+    "apixaban": [
+      "eliquis"
+    ],
+    "dabigatran": [
+      "pradaxa"
+    ],
+    "bisoprolol": [
+      "concor"
+    ],
+    "carvedilol": [
+      "dilatrend",
+      "coreg"
+    ],
+    "spironolactone": [
+      "aldactone"
+    ],
+    "hydrochlorothiazide": [
+      "hctz",
+      "microzide"
+    ],
+    "levothyroxine": [
+      "synthroid",
+      "euthyrox"
+    ],
+    "gabapentin": [
+      "neurontin"
+    ],
+    "pregabalin": [
+      "lyrica"
+    ],
+    "tramadol": [
+      "ultram"
+    ],
+    "morphine": [
+      "ms contin",
+      "oramorph"
+    ]
+  }
+}
