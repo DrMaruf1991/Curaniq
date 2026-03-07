@@ -175,14 +175,33 @@ from curaniq.layers.L9_audit_payments.citation_provenance import CitationProvena
 # ── WIRING: L10-1 Shadow Deploy (was unwired) ──
 from curaniq.layers.L10_testing.shadow_deploy import ShadowDeploymentEngine
 
-# ── NEW: L10-2/L10-4 Regression + Benchmark ──
+# ── L10-2/L10-4/L10-11/L10-12 Regression + Benchmark + Trust + ROI ──
 from curaniq.layers.L10_testing.regression_benchmark import (
     SyntheticPatientRegression,
     BenchmarkDashboard,
+    ClinicianTrustDashboard,
+    InstitutionalROICalculator,
 )
 
 # ── WIRING: L14-6 Document Intake (was unwired) ──
 from curaniq.layers.L14_interaction.document_intake import DocumentIntakePipeline
+
+# ── NEW: L0-9/L0-10/L0-11 Ops + Boundary ──
+from curaniq.layers.L0_regulatory.ops_boundary import (
+    ProductBoundaryEnforcer,
+    ProductionOpsHub,
+    IncidentResponseSystem,
+    ProductMode,
+)
+# ── NEW: L1-10 LactMed + L1-12 Cochrane ──
+from curaniq.layers.L1_evidence_ingestion.lactmed_cochrane import (
+    LactMedConnector,
+    CochraneConnector,
+)
+# ── NEW: L4-11 Cross-Encoder Reranking ──
+from curaniq.layers.L4_ai_model.cross_encoder import CrossEncoderReranker
+# ── NEW: L8-8 Medication Coverage Scope Fence ──
+from curaniq.layers.L8_interface.coverage_scope import MedicationCoverageScopeFence
 
 logger = logging.getLogger(__name__)
 
@@ -478,6 +497,25 @@ class CURANIQPipeline:
         # ── L14-6: Document Intake ──
         self.document_intake = DocumentIntakePipeline()
 
+        # ── L0-9/L0-10/L0-11: Ops + Boundary Enforcement ──
+        self.boundary_enforcer = ProductBoundaryEnforcer()
+        self.ops_hub = ProductionOpsHub()
+        self.incident_system = IncidentResponseSystem()
+
+        # ── L1-10/L1-12: LactMed + Cochrane connectors ──
+        self.lactmed = LactMedConnector()
+        self.cochrane = CochraneConnector()
+
+        # ── L4-11: Cross-Encoder Reranking ──
+        self.cross_encoder = CrossEncoderReranker()
+
+        # ── L8-8: Medication Coverage Scope Fence ──
+        self.scope_fence = MedicationCoverageScopeFence()
+
+        # ── L10-11/L10-12: Clinician Trust + ROI ──
+        self.clinician_trust = ClinicianTrustDashboard()
+        self.roi_calculator = InstitutionalROICalculator()
+
     def process(self, query: ClinicalQuery) -> CURANIQResponse:
         """
         Execute the complete CURANIQ pipeline for a clinical query.
@@ -492,6 +530,16 @@ class CURANIQPipeline:
         # ═══════════════════════════════════════════════════════════════
         detected_language = self.multilingual_clinical.detect_language(query.raw_text)
         query_language = detected_language.value  # "en", "ru", "uz"
+
+        # ═══════════════════════════════════════════════════════════════
+        # STAGE 0.3: L0-10 Rate Limiting & Cost Budget Check
+        # ═══════════════════════════════════════════════════════════════
+        client_id = getattr(query, 'client_id', 'default')
+        rate_ok, rate_msg = self.ops_hub.check_rate_limit(client_id)
+        if not rate_ok:
+            return self._build_refusal_response(
+                query, "RATE_LIMITED", rate_msg, InteractionMode.QUICK_ANSWER,
+            )
 
         # ═══════════════════════════════════════════════════════════════
         # STAGE 1: L8-12/L8-13 Universal Input Normalization
@@ -561,6 +609,45 @@ class CURANIQPipeline:
             patient_context=query.patient_context,
             drugs_mentioned=drugs_mentioned,
         )
+
+        # ═══════════════════════════════════════════════════════════════
+        # STAGE 5.15: L8-8 Medication Coverage Scope Fence
+        # Check if drugs are within CURANIQ's validated formulary.
+        # Out-of-scope drugs get reduced confidence, not refusal.
+        # ═══════════════════════════════════════════════════════════════
+        scope_check = self.scope_fence.check_scope(drugs_mentioned, english_text)
+        if not scope_check.in_scope and scope_check.confidence_modifier == 0.0:
+            return self._build_refusal_response(
+                query, "OUT_OF_SCOPE", scope_check.scope_message, mode,
+            )
+
+        # ═══════════════════════════════════════════════════════════════
+        # STAGE 5.17: L4-11 Cross-Encoder Reranking
+        # Re-score evidence candidates with cross-encoder for precision.
+        # Neural model if CROSS_ENCODER_URL set, else enhanced lexical.
+        # ═══════════════════════════════════════════════════════════════
+        if evidence_pack.objects:
+            rerank_result = self.cross_encoder.rerank(
+                query=english_text,
+                candidates=[
+                    {
+                        "evidence_id": str(ev.evidence_id),
+                        "title": ev.title,
+                        "snippet": ev.snippet,
+                        "published_year": ev.published_date.year if ev.published_date else None,
+                    }
+                    for ev in evidence_pack.objects
+                ],
+                top_k=min(15, len(evidence_pack.objects)),
+            )
+            # Reorder evidence_pack.objects by reranked order
+            if rerank_result.reranked:
+                reranked_ids = [r.evidence_id for r in rerank_result.reranked]
+                id_to_ev = {str(ev.evidence_id): ev for ev in evidence_pack.objects}
+                reordered = [id_to_ev[eid] for eid in reranked_ids if eid in id_to_ev]
+                # Keep any evidence not in reranked list at the end
+                remaining = [ev for ev in evidence_pack.objects if str(ev.evidence_id) not in reranked_ids]
+                evidence_pack.objects = reordered + remaining
 
         # ═══════════════════════════════════════════════════════════════
         # STAGE 5.2: L1-7 Deduplication Engine
@@ -819,6 +906,30 @@ class CURANIQPipeline:
             safe_next_steps = safe_next_steps + [
                 f"⚠️ {flag}" for flag in negative_flags[:3]
             ]
+
+        # ═══════════════════════════════════════════════════════════════
+        # STAGE 11.7: L0-9 Product Boundary Enforcement
+        # Check if output content types are permitted for user's role.
+        # Patient mode BLOCKS dosing/diagnostic/directive content.
+        # ═══════════════════════════════════════════════════════════════
+        if query.user_role and query.user_role.value == "patient":
+            output_categories = self.boundary_enforcer.classify_output(summary_text)
+            boundary_check = self.boundary_enforcer.check_output(
+                ProductMode.PATIENT, output_categories,
+            )
+            if not boundary_check.allowed:
+                # Strip blocked content, add patient-safe message
+                summary_text = (
+                    "Based on the available evidence, here is general educational "
+                    "information about your query. For specific dosing, diagnostic, "
+                    "or treatment decisions, please consult your healthcare provider.\n\n"
+                    + boundary_check.message
+                )
+                # Remove evidence cards that contain dosing/directive content
+                evidence_cards = [
+                    card for card in evidence_cards
+                    if card.claim_type.value not in ("DOSING", "CONTRAINDICATION", "MONITORING")
+                ]
 
         # Build monitoring / stop rules / escalation from CQL + safety gate context
         monitoring = self._extract_monitoring(cql_results, safety_suite_result, drugs_mentioned)
