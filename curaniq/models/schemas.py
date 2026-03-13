@@ -345,6 +345,9 @@ class SafetyGateSuite(BaseModel):
 
     @model_validator(mode="after")
     def compute_overall(self) -> "SafetyGateSuite":
+        if not self.gates:
+            # Empty gates = refusal/emergency path. Preserve values as set by caller.
+            return self
         self.hard_block = any(
             g.severity in ("EMERGENCY", "BLOCK") and not g.passed
             for g in self.gates

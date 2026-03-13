@@ -530,6 +530,9 @@ EVIDENCE PACK:
 PATIENT CONTEXT:
 {patient_context_text}
 
+CQL DETERMINISTIC SAFETY OUTPUTS (computed by rule engine -- OVERRIDE your training knowledge):
+{cql_safety_text}
+
 QUERY:
 {query_text}
 
@@ -593,7 +596,7 @@ class ConstrainedGenerator:
 
         if self._llm_client:
             # Production: call actual LLM API
-            return self._call_llm(query.raw_text, evidence_text, patient_text, mode)
+            return self._call_llm(query.raw_text, evidence_text, patient_text, mode, cql_results)
         else:
             # Test/demo: return structured mock response based on evidence content
             # Mock mode: no real LLM → no cross-LLM agreement. Conservative baseline.
@@ -656,10 +659,11 @@ class ConstrainedGenerator:
         lines.append("Evidence quality and recency have been assessed. "
                      "Guideline recommendations may vary by jurisdiction.")
 
-        if cql_results and cql_results.get("renal_adjustments"):
-            lines.append("\n[CQL DETERMINISTIC OUTPUTS]")
-            for drug, adj in cql_results["renal_adjustments"].items():
-                lines.append(f"{drug}: {adj['dose']} (action: {adj['action']})")
+        if cql_results:
+            cql_text = self._format_cql_safety(cql_results)
+            if "No safety issues" not in cql_text:
+                lines.append("\n[CQL DETERMINISTIC OUTPUTS]")
+                lines.append(cql_text)
 
         lines.append("\n[SAFE NEXT STEPS]")
         lines.append("Confirm with official prescribing information for your jurisdiction. "
@@ -674,15 +678,20 @@ class ConstrainedGenerator:
         evidence_text: str,
         patient_text: str,
         mode: InteractionMode,
+        cql_results: Optional[dict] = None,
     ) -> tuple[str, float]:
         """
         Production LLM call. Requires llm_client to be initialized.
         Returns (output_text, cross_llm_agreement_score).
         """
+        # Format CQL deterministic outputs for prompt
+        cql_safety_text = self._format_cql_safety(cql_results)
+
         # Build the full prompt from template
         system_prompt = GENERATOR_SYSTEM_PROMPT.format(
             evidence_pack_text=evidence_text,
             patient_context_text=patient_text,
+            cql_safety_text=cql_safety_text,
             query_text=query_text,
         )
 

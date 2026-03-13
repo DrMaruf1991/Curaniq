@@ -301,6 +301,12 @@ class DeduplicationEngine:
         self._pmid_index: dict[str, list[dict]] = {}
         self._title_index: dict[str, list[dict]] = {}
 
+    def clear(self) -> None:
+        """Reset all dedup indexes. Call at start of each request to prevent cross-request leakage."""
+        self._doi_index.clear()
+        self._pmid_index.clear()
+        self._title_index.clear()
+
     def _normalize_title(self, title: str) -> str:
         """Normalize title for comparison: lowercase, remove punctuation."""
         return re.sub(r'[^\w\s]', '', title.lower()).strip()

@@ -1,9 +1,7 @@
-import logging
+from __future__ import annotations
 """
 CURANIQ - Audit Storage Backend (L9-1)
 Pluggable, immutable, append-only audit storage.
-
-Copy to: curaniq/audit/storage.py
 
 Architecture:
   - Append-only: entries are NEVER modified or deleted (21 CFR Part 11)
@@ -14,7 +12,7 @@ Architecture:
 
 Storage path from env: CURANIQ_AUDIT_PATH (default: ./curaniq_audit.jsonl)
 """
-from __future__ import annotations
+import logging
 
 import json
 import os

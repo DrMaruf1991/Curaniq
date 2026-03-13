@@ -3,6 +3,8 @@ CURANIQ — FastAPI Application
 All API routes for the Medical Evidence Operating System.
 """
 from __future__ import annotations
+import asyncio
+import logging
 import sys
 import os
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
@@ -275,10 +277,13 @@ async def process_clinical_query(request: ClinicalQueryRequest):
     pipeline = get_pipeline()
     query = _build_query(request)
     try:
-        response = pipeline.process(query)
+        # pipeline.process() is sync and takes 2-30s. Run in thread to avoid
+        # blocking the event loop (which would starve ALL concurrent requests).
+        response = await asyncio.to_thread(pipeline.process, query)
         return _serialize_response(response)
     except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Pipeline error: {str(e)}")
+        logging.getLogger(__name__).error("Pipeline error: %s", e, exc_info=True)
+        raise HTTPException(status_code=500, detail="Internal pipeline error. Check server logs.")
 
 @app.post("/query/quick", response_model=CURANIQAPIResponse, tags=["Clinical Query"])
 async def quick_answer(request: ClinicalQueryRequest):

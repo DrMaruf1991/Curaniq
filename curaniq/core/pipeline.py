@@ -21,6 +21,7 @@ import logging
 import re
 import time
 import asyncio
+import threading
 from datetime import datetime, timezone
 from typing import Any, Optional
 from uuid import UUID, uuid4
@@ -357,33 +358,9 @@ logger = logging.getLogger(__name__)
 # L6-1: PROMPT INJECTION DEFENSE  (sanitizer)
 # ─────────────────────────────────────────────────────────────────────────────
 
-# Known prompt injection patterns from CURANIQ MPIB adversarial library
-_INJECTION_PATTERNS: list[re.Pattern] = [
-    re.compile(r'ignore\s+(all\s+)?(previous|prior|above)\s+(instructions?|prompts?|rules?)', re.I),
-    re.compile(r'you\s+are\s+now\s+(?:a\s+)?(?:different|new|unrestricted|DAN)', re.I),
-    re.compile(r'forget\s+(?:all\s+)?(?:your\s+)?(?:training|instructions?|rules?|restrictions?)', re.I),
-    re.compile(r'disregard\s+(?:all\s+)?(?:previous|prior|above)\s+', re.I),
-    re.compile(r'<\s*/?(?:system|assistant|user|prompt)\s*>', re.I),
-    re.compile(r'###\s*(?:SYSTEM|NEW\s+TASK|OVERRIDE)', re.I),
-    re.compile(r'act\s+as\s+(?:if\s+you\s+(?:are|were)\s+)?(?:an?\s+)?(?:unrestricted|jailbreak)', re.I),
-    re.compile(r'print\s+(?:your\s+)?(?:system\s+prompt|instructions|api\s+key)', re.I),
-]
-
-
-def sanitize_input(query_text: str) -> tuple[str, bool]:
-    """
-    L6-1: Detect and sanitize prompt injection attempts.
-    Returns (sanitized_text, injection_detected).
-    """
-    for pattern in _INJECTION_PATTERNS:
-        if pattern.search(query_text):
-            return (
-                "[PROMPT INJECTION DETECTED — input sanitized]",
-                True,
-            )
-    # Basic sanitization: strip control characters
-    sanitized = re.sub(r'[\x00-\x08\x0b\x0c\x0e-\x1f\x7f]', '', query_text)
-    return sanitized, False
+# L6-1 prompt injection defense is handled by PromptDefenseSuite (curaniq/layers/L6_security/prompt_defense.py)
+# which provides 6-layer structural defense (sanitization, domain gating, boundary enforcement,
+# canary tokens, output scanning, anomaly scoring). See STAGE 1.5 in process().
 
 
 # ─────────────────────────────────────────────────────────────────────────────
@@ -540,6 +517,12 @@ class CURANIQPipeline:
         llm_client: Optional[Any] = None,
         evidence_store: Optional[list[EvidenceObject]] = None,
     ) -> None:
+        # Thread safety: pipeline is a singleton, process() runs in threads (FIX-19).
+        # Lock ensures one query processes at a time to prevent state corruption
+        # in mutable components (dedup, assumption_ledger, claim_engine, etc.).
+        # Correctness > throughput for a medical safety system.
+        self._process_lock = threading.Lock()
+
         # Initialize all components
         self.triage_gate       = TriageGate()
         self.mode_router       = ModeRouter()
@@ -782,7 +765,22 @@ class CURANIQPipeline:
         Execute the complete CURANIQ pipeline for a clinical query.
         Returns a fully verified, safety-gated CURANIQResponse.
         """
+        # Thread safety: serialize pipeline calls to prevent state corruption
+        # in mutable components (dedup, assumption_ledger, claim_engine).
+        # Event loop is NOT blocked (FIX-19 runs this in a thread).
+        with self._process_lock:
+            return self._process_impl(query)
+
+    def _process_impl(self, query: ClinicalQuery) -> CURANIQResponse:
+        """Internal: actual pipeline implementation."""
         start_time = time.perf_counter()
+
+        # ═══════════════════════════════════════════════════════════════
+        # STAGE 0.1: Per-Request State Reset
+        # Pipeline is a singleton — clear request-scoped state to prevent
+        # cross-request contamination (BUG-07: dedup state leak).
+        # ═══════════════════════════════════════════════════════════════
+        self.deduplication_engine.clear()
 
         # ═══════════════════════════════════════════════════════════════
         # STAGE 0.5: L8-5 Language Detection
@@ -810,6 +808,20 @@ class CURANIQPipeline:
         english_text = normalized.english_text
         drugs_mentioned = normalized.detected_drugs
         food_herbs = normalized.detected_foods
+
+        # ===============================================================
+        # STAGE 1.1: Merge patient's active medications into drugs list
+        # DDI checking requires ALL drugs -- both from query AND from
+        # patient context. Without this, asking "prescribe warfarin?"
+        # for a patient on aspirin would miss the warfarin+aspirin DDI.
+        # ===============================================================
+        if query.patient_context and query.patient_context.active_medications:
+            existing_lower = {d.lower() for d in drugs_mentioned}
+            for med in query.patient_context.active_medications:
+                if med.lower() not in existing_lower:
+                    drugs_mentioned.append(med.lower())
+                    existing_lower.add(med.lower())
+
 
         # ═══════════════════════════════════════════════════════════════
         # STAGE 1.5: L6-1 Prompt Defense Suite (6-layer structural)
@@ -1026,6 +1038,7 @@ class CURANIQPipeline:
         # Enables reproducibility: same query + same versions = same mapping.
         # ═══════════════════════════════════════════════════════════════
         terminology_manifest = self.terminology_versions.get_version_manifest()
+        cql_results["terminology_versions"] = terminology_manifest
 
         # ═══════════════════════════════════════════════════════════════
         # STAGE 5.6: L1-6 Preprint Quarantine
@@ -1088,13 +1101,33 @@ class CURANIQPipeline:
         )
 
         # ═══════════════════════════════════════════════════════════════
+        # STAGE 6.1: L3-1 Drug-Drug Interaction Check (DDI)
+        # Uses ExtendedCQLEngine which has 12 DDI pairs.
+        # DDI is the #1 medication safety check — must run for ALL queries.
+        # ═══════════════════════════════════════════════════════════════
+        ddi_results = []
+        if len(drugs_mentioned) >= 2:
+            ddi_results = self.extended_cql.check_all_ddis(drugs_mentioned)
+            cql_results["ddi_results"] = ddi_results
+            for ddi in ddi_results:
+                severity_str = ddi.severity.value.upper() if hasattr(ddi.severity, 'value') else str(ddi.severity)
+                cql_results["safety_flags"] = cql_results.get("safety_flags", [])
+                if ddi.is_absolute:
+                    cql_results["safety_flags"].append(SafetyFlag.CONTRAINDICATED)
+                logger.info(
+                    "L3-1 DDI [%s]: %s + %s — %s. Management: %s",
+                    severity_str, ddi.drug_1, ddi.drug_2,
+                    ddi.clinical_effect[:80], ddi.management[:80],
+                )
+
+        # ═══════════════════════════════════════════════════════════════
         # STAGE 6.5: L3 P2 Clinical Specialty Engines
         # All deterministic. Run AFTER CQL kernel, BEFORE LLM.
         # Results feed into the LLM prompt as additional safety context.
         # ═══════════════════════════════════════════════════════════════
         specialty_alerts: list[str] = []
         patient = query.patient_context or _empty_patient()
-        patient_age = getattr(patient, 'age', None) or 0
+        patient_age = getattr(patient, 'age_years', None) or 0
         patient_egfr = None
         if patient.renal:
             patient_egfr = getattr(patient.renal, 'egfr_ml_min', None)
@@ -1263,6 +1296,14 @@ class CURANIQPipeline:
                         f"Approval needed from: {policy.approval_authority}"
                     )
 
+        # L3-1: DDI alerts -> specialty_alerts (so LLM sees them in prompt)
+        for ddi in ddi_results:
+            severity_str = ddi.severity.value.upper() if hasattr(ddi.severity, 'value') else str(ddi.severity)
+            specialty_alerts.append(
+                f"DDI [{severity_str}]: {ddi.drug_1} + {ddi.drug_2} -- "
+                f"{ddi.clinical_effect[:120]}. Management: {ddi.management[:100]}"
+            )
+
         # Inject specialty alerts into CQL results for downstream use
         cql_results["specialty_alerts"] = specialty_alerts
 
@@ -1273,15 +1314,30 @@ class CURANIQPipeline:
         # L6-2: PHI Scrubbing (BEFORE LLM — the LLM never sees PHI)
         # HIPAA Safe Harbor 18 identifiers stripped from query text.
         # ═══════════════════════════════════════════════════════════════
-        phi_result = self.phi_scrubber.scrub(english_text if 'english_text' in dir() else sanitized_text)
+        phi_result = self.phi_scrubber.scrub(english_text)
         scrubbed_query_text = phi_result.scrubbed_text
 
+        # Create a PHI-scrubbed copy of the query for LLM consumption.
+        # ClinicalQuery is frozen → use model_copy to replace raw_text.
+        scrubbed_query = query.model_copy(update={"raw_text": scrubbed_query_text})
+
         llm_output, cross_llm_agreement = self.generator.generate(
-            query=query,
+            query=scrubbed_query,
             evidence_pack=evidence_pack,
             mode=mode,
             cql_results=cql_results,
         )
+
+        # L6-3: Output Exfiltration Scanning (AFTER LLM — check for PHI leaks)
+        output_is_clean, leaked_types = self.output_scanner.scan(llm_output)
+        if not output_is_clean:
+            logger.warning(
+                "L6-3 Output exfiltration detected: %s. Re-scrubbing LLM output.",
+                leaked_types,
+            )
+            # Re-scrub the output to remove any leaked PHI
+            rescrub = self.phi_scrubber.scrub(llm_output)
+            llm_output = rescrub.scrubbed_text
 
         # ═══════════════════════════════════════════════════════════════
         # STAGE 8: L4-3 Claim Contract Engine (enforcement)
@@ -1309,14 +1365,29 @@ class CURANIQPipeline:
                 # Determine risk level from triage + claim types
                 query_risk = "high_risk" if triage.result == TriageResult.HIGH_RISK else "standard"
                 
-                # Run async jury in sync pipeline context
-                verified_claims = asyncio.get_event_loop().run_until_complete(
-                    self.adversarial_jury.verify_claims(
-                        claims=claim_contract.atomic_claims,
-                        evidence_pack=evidence_pack,
-                        query_risk_level=query_risk,
-                    )
-                )
+                # Run async jury safely — works whether called from sync or async context.
+                # asyncio.get_event_loop().run_until_complete() crashes inside FastAPI's
+                # running event loop with RuntimeError. Use a dedicated thread instead.
+                import concurrent.futures
+                _jury_executor = concurrent.futures.ThreadPoolExecutor(max_workers=1)
+
+                def _run_jury():
+                    """Run async jury in a fresh event loop on a separate thread."""
+                    loop = asyncio.new_event_loop()
+                    try:
+                        return loop.run_until_complete(
+                            self.adversarial_jury.verify_claims(
+                                claims=claim_contract.atomic_claims,
+                                evidence_pack=evidence_pack,
+                                query_risk_level=query_risk,
+                            )
+                        )
+                    finally:
+                        loop.close()
+
+                future = _jury_executor.submit(_run_jury)
+                verified_claims = future.result(timeout=30)  # 30s timeout
+                _jury_executor.shutdown(wait=False)
                 claim_contract.atomic_claims = verified_claims
                 
                 # Update cross_llm_agreement from actual jury results
@@ -1333,10 +1404,9 @@ class CURANIQPipeline:
             except Exception as jury_err:
                 # Jury failure is NON-BLOCKING — claims proceed with base confidence
                 # This is the correct fail-open for verification (fail-closed is for safety gates)
-                import logging
-                logging.getLogger(__name__).warning(
-                    f"L4-12 jury failed (non-blocking): {jury_err}. "
-                    "Claims proceed with base confidence."
+                logger.warning(
+                    "L4-12 jury failed (non-blocking): %s. Claims proceed with base confidence.",
+                    jury_err,
                 )
 
         # ═══════════════════════════════════════════════════════════════
@@ -1403,8 +1473,7 @@ class CURANIQPipeline:
         translation_warnings: list[str] = []
 
         if query_language != "en":
-            # Extract meaning locks from English output BEFORE translation
-            meaning_locks = self.meaning_lock.extract_locks(summary_text, "en")
+            # Meaning locks extracted internally by safe_translate() when translation API is connected.
 
             # Attempt safe translation (uses translation_fn if available)
             translated_summary, was_translated, t_warnings = (
@@ -1445,6 +1514,18 @@ class CURANIQPipeline:
             ]
 
         # ═══════════════════════════════════════════════════════════════
+        # STAGE 11.65: Inject assumption ledger into response
+        # Clinician must see what patient context was MISSING and assumed.
+        # ═══════════════════════════════════════════════════════════════
+        if assumptions:
+            assumption_texts = []
+            for a in assumptions[:5]:
+                text = getattr(a, 'description', None) or getattr(a, 'text', None) or str(a)
+                assumption_texts.append(f"ℹ️ Assumption: {text}")
+            if assumption_texts:
+                safe_next_steps = safe_next_steps + assumption_texts
+
+        # ═══════════════════════════════════════════════════════════════
         # STAGE 11.7: L0-9 Product Boundary Enforcement
         # Check if output content types are permitted for user's role.
         # Patient mode BLOCKS dosing/diagnostic/directive content.
@@ -1470,8 +1551,17 @@ class CURANIQPipeline:
 
         # Build monitoring / stop rules / escalation from CQL + safety gate context
         monitoring = self._extract_monitoring(cql_results, safety_suite_result, drugs_mentioned)
-        stop_rules = self._extract_stop_rules(cql_results, llm_output)
+        monitoring.extend(self._extract_ddi_monitoring(cql_results))
+        stop_rules = self._extract_stop_rules(cql_results)
         escalation = self._extract_escalation(safety_suite_result, query)
+
+        # Inject stop rules into safe_next_steps -- these are critical clinical
+        # directives (e.g., "STOP metformin if eGFR drops below threshold").
+        # Without this, stop rules are computed but never shown to the clinician.
+        if stop_rules:
+            safe_next_steps = safe_next_steps + [
+                f"STOP/HOLD: {rule}" for rule in stop_rules
+            ]
 
         # ═══════════════════════════════════════════════════════════════
         # STAGE 12.7: L8-9 Patient Education Simplification
@@ -1562,8 +1652,8 @@ class CURANIQPipeline:
                     for e in evidence_pack.objects
                 ],
             )
-        except Exception:
-            pass  # Non-blocking
+        except Exception as kg_err:
+            logger.warning("L4-10 knowledge graph extraction failed (non-blocking): %s", kg_err)
 
         # ═══════════════════════════════════════════════════════════════
         # STAGE 14: L9-8 Analytics + L9-2 C2PA Credentials
@@ -1574,8 +1664,8 @@ class CURANIQPipeline:
                 user_role=query.user_role.value if query.user_role else "unknown",
                 duration_ms=elapsed_ms,
             )
-        except Exception:
-            pass
+        except Exception as analytics_err:
+            logger.warning("L9-8 analytics tracking failed (non-blocking): %s", analytics_err)
 
         try:
             self.c2pa.generate_credential(
@@ -1584,12 +1674,11 @@ class CURANIQPipeline:
                 model_used="claude-sonnet-4-20250514",
                 evidence_hashes=[hashlib.sha256(e.snippet.encode()).hexdigest()[:16]
                                  for e in evidence_pack.objects[:10]],
-                gates_passed=[g.gate_name for g in safety_suite_result.gate_results
-                              if hasattr(g, 'gate_name') and g.passed]
-                             if hasattr(safety_suite_result, 'gate_results') else [],
+                gates_passed=[g.gate_name for g in safety_suite_result.gates
+                              if hasattr(g, 'gate_name') and g.passed],
             )
-        except Exception:
-            pass
+        except Exception as c2pa_err:
+            logger.warning("L9-2 C2PA credential generation failed (non-blocking): %s", c2pa_err)
 
         return CURANIQResponse(
             query_id=query.query_id,
@@ -1666,7 +1755,6 @@ class CURANIQPipeline:
         mode: InteractionMode,
     ) -> CURANIQResponse:
         from curaniq.models.schemas import SafetyGateResult, SafetyGateSuite, EvidencePack, ClaimContract, TriageAssessment
-        from .triage_gate import TriageAssessment
         dummy_triage = TriageAssessment(result=TriageResult.CLEAR)
         empty_pack = EvidencePack(pack_id=uuid4(), query_id=query.query_id, objects=[])
         empty_contract = ClaimContract(query_id=query.query_id, atomic_claims=[])
@@ -1782,7 +1870,17 @@ class CURANIQPipeline:
 
         return list(set(monitoring))[:8]   # Deduplicate, cap at 8
 
-    def _extract_stop_rules(self, cql_results: dict, llm_output: str) -> list[str]:
+    def _extract_ddi_monitoring(self, cql_results: dict) -> list[str]:
+        """Extract monitoring requirements from DDI results."""
+        mon = []
+        for ddi in cql_results.get("ddi_results", []):
+            if hasattr(ddi, 'monitoring_required') and ddi.monitoring_required:
+                sev = ddi.severity.value.upper() if hasattr(ddi.severity, 'value') else str(ddi.severity)
+                for req in ddi.monitoring_required:
+                    mon.append(f"DDI [{sev}] {ddi.drug_1}+{ddi.drug_2}: {req}")
+        return mon
+
+    def _extract_stop_rules(self, cql_results: dict) -> list[str]:
         """Extract stop/hold rules from CQL results."""
         stop_rules: list[str] = []
 

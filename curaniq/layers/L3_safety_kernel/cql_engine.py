@@ -372,6 +372,36 @@ class PKCalculators:
 
 # Format: frozenset({drug_a, drug_b}) → DDIResult template
 # Drug names are RxNorm normalized lowercase
+# ---------------------------------------------------------------
+# DRUG-TO-CLASS LOOKUP: enables class-level DDI matching
+# Maps specific drugs to their pharmacological classes used in _DDI_DATABASE.
+# Without this, "fluoxetine + tramadol" won't match "ssri + tramadol".
+# ---------------------------------------------------------------
+_DRUG_TO_CLASS: dict[str, list[str]] = {
+    # SSRIs
+    "fluoxetine":     ["ssri"],
+    "sertraline":     ["ssri"],
+    "paroxetine":     ["ssri"],
+    "citalopram":     ["ssri"],
+    "escitalopram":   ["ssri"],
+    "fluvoxamine":    ["ssri"],
+    # ACE inhibitors
+    "lisinopril":     ["ace_inhibitor"],
+    "enalapril":      ["ace_inhibitor"],
+    "ramipril":       ["ace_inhibitor"],
+    "captopril":      ["ace_inhibitor"],
+    "perindopril":    ["ace_inhibitor"],
+    "benazepril":     ["ace_inhibitor"],
+    "quinapril":      ["ace_inhibitor"],
+    "fosinopril":     ["ace_inhibitor"],
+    # Potassium-sparing diuretics
+    "spironolactone": ["potassium_sparing_diuretic"],
+    "eplerenone":     ["potassium_sparing_diuretic"],
+    "amiloride":      ["potassium_sparing_diuretic"],
+    "triamterene":    ["potassium_sparing_diuretic"],
+}
+
+
 _DDI_DATABASE: dict[frozenset, dict] = {
     # ─── CONTRAINDICATED COMBINATIONS ───────────────────────────────────────
     frozenset({"warfarin", "metronidazole"}): {
@@ -589,7 +619,8 @@ class CQLEngine:
     def check_all_ddis(self, drugs: list[str]) -> list[DDIResult]:
         """
         Check all pairwise drug-drug interactions.
-        O(n²) — acceptable for clinical use (typically < 20 drugs).
+        Checks both specific drug pairs AND drug-class pairs
+        (e.g., fluoxetine->ssri so fluoxetine+tramadol matches ssri+tramadol).
         """
         results = []
         seen_pairs = set()
@@ -601,7 +632,22 @@ class CQLEngine:
                     continue
                 seen_pairs.add(pair)
                 
+                # Try direct pair first
                 ddi_data = self._ddi_db.get(pair)
+                
+                # If no direct match, try class-expanded pairs
+                if not ddi_data:
+                    names_a = [drug_a] + _DRUG_TO_CLASS.get(drug_a, [])
+                    names_b = [drug_b] + _DRUG_TO_CLASS.get(drug_b, [])
+                    for na in names_a:
+                        for nb in names_b:
+                            expanded = frozenset({na, nb})
+                            if expanded != pair:
+                                ddi_data = self._ddi_db.get(expanded)
+                                if ddi_data:
+                                    break
+                        if ddi_data:
+                            break
                 if ddi_data and ddi_data["severity"] != DDISeverity.NO_INTERACTION:
                     result = DDIResult(
                         drug_1=drug_a,

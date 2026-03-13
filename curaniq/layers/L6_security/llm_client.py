@@ -245,7 +245,10 @@ class MultiLLMClient:
             temperature=temp,
             system=system,
             messages=[{"role": "user", "content": user}],
+            timeout=60.0,
         )
+        if not response.content:
+            raise ValueError("Anthropic returned empty content")
         text = response.content[0].text
         return LLMResponse(
             text=text,
@@ -261,12 +264,15 @@ class MultiLLMClient:
             model=model,
             max_tokens=max_tokens,
             temperature=temp,
+            timeout=60.0,
             messages=[
                 {"role": "system", "content": system},
                 {"role": "user", "content": user},
             ],
         )
-        text = response.choices[0].message.content
+        if not response.choices:
+            raise ValueError("OpenAI returned empty choices")
+        text = response.choices[0].message.content or ""
         return LLMResponse(
             text=text,
             provider="openai",
@@ -284,8 +290,11 @@ class MultiLLMClient:
         response = model_obj.generate_content(
             user,
             generation_config={"max_output_tokens": max_tokens, "temperature": temp},
+            request_options={"timeout": 60},
         )
-        text = response.text
+        text = getattr(response, 'text', None)
+        if not text:
+            raise ValueError("Google Gemini returned empty text")
         return LLMResponse(
             text=text,
             provider="google",
