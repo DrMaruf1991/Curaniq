@@ -129,6 +129,8 @@ class CURANIQAPIResponse(BaseModel):
     monitoring_required: list[str]
     escalation_thresholds: list[str]
     follow_up_interval: Optional[str]
+    assumptions: list[str]
+    stop_rules: list[str]
     triage_result: str
     triage_message: Optional[str]
     claim_contract_enforced: bool
@@ -168,6 +170,8 @@ def _serialize_response(resp: CURANIQResponse) -> CURANIQAPIResponse:
         monitoring_required=resp.monitoring_required,
         escalation_thresholds=resp.escalation_thresholds,
         follow_up_interval=resp.follow_up_interval,
+        assumptions=resp.assumptions,
+        stop_rules=resp.stop_rules,
         triage_result=resp.triage.result.value,
         triage_message=resp.triage.escalation_message,
         claim_contract_enforced=resp.claim_contract_enforced,

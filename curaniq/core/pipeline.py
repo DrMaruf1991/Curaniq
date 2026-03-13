@@ -1521,13 +1521,12 @@ class CURANIQPipeline:
         # STAGE 11.65: Inject assumption ledger into response
         # Clinician must see what patient context was MISSING and assumed.
         # ═══════════════════════════════════════════════════════════════
+        # Build assumption texts for dedicated response field
+        assumption_texts = []
         if assumptions:
-            assumption_texts = []
             for a in assumptions[:5]:
                 text = getattr(a, 'description', None) or getattr(a, 'text', None) or str(a)
-                assumption_texts.append(f"ℹ️ Assumption: {text}")
-            if assumption_texts:
-                safe_next_steps = safe_next_steps + assumption_texts
+                assumption_texts.append(text)
 
         # ═══════════════════════════════════════════════════════════════
         # STAGE 11.7: L0-9 Product Boundary Enforcement
@@ -1559,13 +1558,7 @@ class CURANIQPipeline:
         stop_rules = self._extract_stop_rules(cql_results)
         escalation = self._extract_escalation(safety_suite_result, query)
 
-        # Inject stop rules into safe_next_steps -- these are critical clinical
-        # directives (e.g., "STOP metformin if eGFR drops below threshold").
-        # Without this, stop rules are computed but never shown to the clinician.
-        if stop_rules:
-            safe_next_steps = safe_next_steps + [
-                f"STOP/HOLD: {rule}" for rule in stop_rules
-            ]
+
 
         # ═══════════════════════════════════════════════════════════════
         # STAGE 12.7: L8-9 Patient Education Simplification
@@ -1697,6 +1690,8 @@ class CURANIQPipeline:
             monitoring_required=monitoring,
             escalation_thresholds=escalation,
             follow_up_interval=self._suggest_follow_up(drugs_mentioned, cql_results),
+            assumptions=assumption_texts,
+            stop_rules=stop_rules,
             freshness_stamps=freshness_stamps,
             sources_used=evidence_pack.source_count,
             processing_time_ms=round(elapsed_ms, 1),

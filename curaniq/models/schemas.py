@@ -422,6 +422,8 @@ class CURANIQResponse(BaseModel):
     monitoring_required: list[str] = Field(default_factory=list)  # L5-10
     escalation_thresholds: list[str] = Field(default_factory=list)  # L5-10
     follow_up_interval: Optional[str] = None
+    assumptions: list[str] = Field(default_factory=list)       # L14-3 missing context assumptions
+    stop_rules: list[str] = Field(default_factory=list)        # CQL-derived discontinuation rules
 
     # Metadata
     freshness_stamps: list[FreshnessStamp] = Field(default_factory=list)
