@@ -1,0 +1,142 @@
+{
+  "_metadata": {
+    "source": "WHO ATC Classification, BNF Drug Classes",
+    "version": "1.0.0",
+    "last_reviewed": "2025-03-01",
+    "purpose": "Maps drug INN names to pharmacological classes for DDI matching"
+  },
+  "mappings": {
+    "acetylsalicylic acid": [
+      "aspirin"
+    ],
+    "fluoxetine": [
+      "ssri"
+    ],
+    "sertraline": [
+      "ssri"
+    ],
+    "paroxetine": [
+      "ssri"
+    ],
+    "citalopram": [
+      "ssri"
+    ],
+    "escitalopram": [
+      "ssri"
+    ],
+    "fluvoxamine": [
+      "ssri"
+    ],
+    "venlafaxine": [
+      "ssri"
+    ],
+    "desvenlafaxine": [
+      "ssri"
+    ],
+    "duloxetine": [
+      "ssri"
+    ],
+    "milnacipran": [
+      "ssri"
+    ],
+    "levomilnacipran": [
+      "ssri"
+    ],
+    "lisinopril": [
+      "ace_inhibitor"
+    ],
+    "enalapril": [
+      "ace_inhibitor"
+    ],
+    "ramipril": [
+      "ace_inhibitor"
+    ],
+    "captopril": [
+      "ace_inhibitor"
+    ],
+    "perindopril": [
+      "ace_inhibitor"
+    ],
+    "benazepril": [
+      "ace_inhibitor"
+    ],
+    "quinapril": [
+      "ace_inhibitor"
+    ],
+    "fosinopril": [
+      "ace_inhibitor"
+    ],
+    "trandolapril": [
+      "ace_inhibitor"
+    ],
+    "moexipril": [
+      "ace_inhibitor"
+    ],
+    "spironolactone": [
+      "potassium_sparing_diuretic"
+    ],
+    "eplerenone": [
+      "potassium_sparing_diuretic"
+    ],
+    "amiloride": [
+      "potassium_sparing_diuretic"
+    ],
+    "triamterene": [
+      "potassium_sparing_diuretic"
+    ],
+    "iohexol": [
+      "contrast_media"
+    ],
+    "iodixanol": [
+      "contrast_media"
+    ],
+    "iopamidol": [
+      "contrast_media"
+    ],
+    "iopromide": [
+      "contrast_media"
+    ],
+    "ioversol": [
+      "contrast_media"
+    ],
+    "gadolinium": [
+      "contrast_media"
+    ],
+    "phenelzine": [
+      "maoi"
+    ],
+    "tranylcypromine": [
+      "maoi"
+    ],
+    "isocarboxazid": [
+      "maoi"
+    ],
+    "selegiline": [
+      "maoi"
+    ],
+    "moclobemide": [
+      "maoi"
+    ],
+    "simvastatin": [
+      "statin"
+    ],
+    "lovastatin": [
+      "statin"
+    ],
+    "atorvastatin": [
+      "statin"
+    ],
+    "rosuvastatin": [
+      "statin"
+    ],
+    "pravastatin": [
+      "statin"
+    ],
+    "fluvastatin": [
+      "statin"
+    ],
+    "pitavastatin": [
+      "statin"
+    ]
+  }
+}

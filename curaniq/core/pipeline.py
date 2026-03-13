@@ -816,11 +816,15 @@ class CURANIQPipeline:
         # for a patient on aspirin would miss the warfarin+aspirin DDI.
         # ===============================================================
         if query.patient_context and query.patient_context.active_medications:
+            from curaniq.layers.L2_curation.ontology import resolve_drug_name
             existing_lower = {d.lower() for d in drugs_mentioned}
             for med in query.patient_context.active_medications:
-                if med.lower() not in existing_lower:
-                    drugs_mentioned.append(med.lower())
-                    existing_lower.add(med.lower())
+                # Resolve brand names to INN: "Tylenol" -> "paracetamol"
+                canonical, resolved = resolve_drug_name(med)
+                canonical_lower = canonical.lower()
+                if canonical_lower not in existing_lower:
+                    drugs_mentioned.append(canonical_lower)
+                    existing_lower.add(canonical_lower)
 
 
         # ═══════════════════════════════════════════════════════════════

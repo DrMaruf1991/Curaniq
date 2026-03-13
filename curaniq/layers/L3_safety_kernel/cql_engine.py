@@ -377,29 +377,21 @@ class PKCalculators:
 # Maps specific drugs to their pharmacological classes used in _DDI_DATABASE.
 # Without this, "fluoxetine + tramadol" won't match "ssri + tramadol".
 # ---------------------------------------------------------------
-_DRUG_TO_CLASS: dict[str, list[str]] = {
-    # SSRIs
-    "fluoxetine":     ["ssri"],
-    "sertraline":     ["ssri"],
-    "paroxetine":     ["ssri"],
-    "citalopram":     ["ssri"],
-    "escitalopram":   ["ssri"],
-    "fluvoxamine":    ["ssri"],
-    # ACE inhibitors
-    "lisinopril":     ["ace_inhibitor"],
-    "enalapril":      ["ace_inhibitor"],
-    "ramipril":       ["ace_inhibitor"],
-    "captopril":      ["ace_inhibitor"],
-    "perindopril":    ["ace_inhibitor"],
-    "benazepril":     ["ace_inhibitor"],
-    "quinapril":      ["ace_inhibitor"],
-    "fosinopril":     ["ace_inhibitor"],
-    # Potassium-sparing diuretics
-    "spironolactone": ["potassium_sparing_diuretic"],
-    "eplerenone":     ["potassium_sparing_diuretic"],
-    "amiloride":      ["potassium_sparing_diuretic"],
-    "triamterene":    ["potassium_sparing_diuretic"],
-}
+def _load_drug_to_class() -> dict[str, list[str]]:
+    """Load drug-to-class mapping from versioned JSON data file."""
+    try:
+        from curaniq.data_loader import load_json_data
+        raw = load_json_data("drug_class_mapping.json")
+        mapping = raw.get("mappings", {})
+        return {drug.lower(): classes for drug, classes in mapping.items() if isinstance(classes, list)}
+    except Exception:
+        import logging
+        logging.getLogger(__name__).warning(
+            "Failed to load drug_class_mapping.json. DDI class-level matching disabled."
+        )
+        return {}
+
+_DRUG_TO_CLASS: dict[str, list[str]] = _load_drug_to_class()
 
 
 _DDI_DATABASE: dict[frozenset, dict] = {
