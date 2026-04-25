@@ -267,3 +267,140 @@ This bug was **not caught by any of the 50 prior tests** because none of them ex
 
 The Python `threading.Lock` only serializes within a single Python process. **Multi-process deployments must use Postgres** (where `SELECT FOR UPDATE` provides cross-process row locking). This is documented in `repositories.py` and is the recommended deployment topology anyway.
 
+
+---
+
+## FIX-33 — Clinical knowledge provider abstraction (Session A)
+
+After a deep audit revealed the codebase contained 22 module-level hardcoded
+clinical-data constants (519 entries across 15 files) — directly contradicting
+the architecture's "evidence-pipeline-first, no hardcoded clinical data"
+principle and the project rule "all clinical dictionaries in JSON under
+`curaniq/data/`" — Session A delivers the durable production-safe fix:
+the clinical knowledge layer.
+
+### Phase 1 — Dead-code elimination (zero behavior change)
+
+Audit found 9 root-level Python files duplicating files in `curaniq/layers/...`
+that were not imported anywhere (3 had drifted from their layered counterparts).
+Each removal verified by full test re-run.
+
+Deleted: `drug_availability.py`, `evidence_retriever.py`, `session_memory.py`,
+`audit_storage.py`, `cost_monitor.py`, `llm_client.py`, `phi_scrubber.py`,
+`prompt_defense.py`, `universal_input.py`. Eliminated ~94 hardcoded clinical
+entries by deletion alone.
+
+Tests after Phase 1: **61/61 still passing.**
+
+### Phase 2 — `curaniq.knowledge` package (the abstraction barrier)
+
+New package `curaniq/knowledge/`:
+- `provider.py` — `ClinicalKnowledgeProvider` Protocol (the contract)
+- `types.py` — Frozen dataclasses with full validation: `Provenance`,
+  `DoseBounds`, `FatalErrorRule`. Provenance enforces ISO-8601 dates,
+  validated license enum, validated extraction-method enum.
+- `vendored.py` — `VendoredSnapshotProvider`, refuses to instantiate in
+  `clinician_prod` (boot-time tripwire via `VendoredDataRefusedError`).
+  Loads JSON snapshots, validates `_metadata` block presence and required
+  keys; `ProvenanceMissingError` for malformed snapshots.
+- `live.py` — `LiveEvidenceProvider`, fail-closed shape ready for L1
+  connector injection in Sessions B–G. Raises `KnowledgeUnavailableError`
+  when the connector for a fact is not yet wired (deliberate — never
+  silently degrade).
+- `router.py` — `RouterProvider` with environment-aware policy:
+  `clinician_prod` → live-only, no fallback; `demo`/`research` → live with
+  vendored fallback; fatal-error rules served universally (rules ARE the
+  safety logic, not vendored data).
+- `exceptions.py` — `KnowledgeError`, `KnowledgeUnavailableError`,
+  `VendoredDataRefusedError`, `ProvenanceMissingError`.
+
+### Phase 3 — Vendored snapshots with full provenance
+
+`curaniq/data/clinical/dose_bounds.json` — 20 drugs, complete
+`_metadata` block (snapshot_date_iso, snapshot_version, license_status,
+extraction_method, is_authoritative=false), DailyMed source URLs per drug,
+label section references.
+
+`curaniq/data/rules/fatal_dose_errors.json` — 6 ISMP-derived sentinel
+rules (methotrexate-daily, vincristine-IT, heparin-mg, colchicine-decimal,
+insulin-U, morphine-opioid-naive) with regex patterns, severities, ISMP
+publication references. Marked `is_authoritative=true` because rules
+ARE the safety logic, not vendored data — the patterns themselves
+encode the rule. Loaded uniformly in all environments.
+
+### Phase 5 — L5-12 migration (the template for Sessions B–G)
+
+Deleted entire `curaniq/layers/L5_safety_gates/safety_gate_pipeline.py`
+(the dead duplicate hosting the order-sensitive broken `DosePlausibilityGate`
+along with `DOSE_PLAUSIBILITY_BOUNDS`, `RENALLY_CLEARED_DRUGS`,
+`TERATOGENIC_DRUGS`, `WEIGHT_REQUIRED_DRUGS`). Confirmed via grep that
+no instantiation existed anywhere — the only import was a dangling alias
+`L5SafetyGatePipeline` in `pipeline.py` that was never called. Removed
+the alias.
+
+Deleted `FATAL_DOSE_ERRORS` hardcoded constant from
+`curaniq/safety/safety_gates.py`. Rewrote
+`gate_dose_plausibility(claims, knowledge_provider=None)` to consume
+`kp.iter_fatal_error_rules()`. The rule's `evaluate()` method on
+`FatalErrorRule` encapsulates danger-pattern + safe-pattern semantics.
+
+Wired `SafetyGateSuiteRunner.__init__(knowledge_provider=None)` for
+dependency injection. Default constructs a `RouterProvider`.
+
+### Phase 6 — Tests + static enforcement
+
+`tests/test_knowledge_contract.py` — 21 tests pinning the contract:
+provenance validators, vendored fail-closed in prod, all six
+architecture-named fatal patterns verified to fire, methotrexate-weekly
+safe-pattern verified to suppress the daily warning, vincristine-IT
+verified to be severity=emergency.
+
+`tests/test_no_hardcoded_clinical_knowledge.py` — 3 tests forming the
+build-time enforcement:
+- `test_no_new_hardcoded_clinical_knowledge` — fails the build if a
+  new module-level UPPER_CASE clinical container is added outside the
+  explicit `_KNOWN_UNMIGRATED` allowlist; allowlist shrinks each session.
+- `test_provider_layer_has_no_clinical_data` — guards that
+  `curaniq/knowledge/` itself never contains hardcoded clinical data.
+- `test_session_a_eliminated_l5_12_constants` — guards that
+  `FATAL_DOSE_ERRORS` and `DOSE_PLAUSIBILITY_BOUNDS` cannot reappear.
+
+### Phase 8 — Documentation
+
+`docs/MIGRATION_PLAYBOOK.md` — six-step recipe for Sessions B–G with
+session-by-session target table mapping each remaining unmigrated
+container to its destination governed source.
+
+### Verification
+
+- **Test suite: 85/85 passing** (61 prior + 21 new contract + 3 new static)
+- **Attack suite: 16/16 passing**:
+    L5-12 catches every architecture-named fatal pattern through the
+    new provider path (mtx-daily blocks, mtx-weekly safe, vincristine-IT
+    emergency-blocks, heparin-mg blocks, insulin-U warns, colchicine 6mg
+    warns, morphine high-dose-naive warns, normal metformin passes).
+    `VendoredSnapshotProvider` correctly refuses in `clinician_prod`.
+    `RouterProvider` correctly refuses dose_bounds in `clinician_prod`,
+    falls back in demo. Fatal rules served universally.
+- **Pipeline: boots cleanly, processes queries, all defenses preserved.**
+
+### What FIX-33 does NOT include (named honestly)
+
+Session A delivers the **abstraction barrier and one full vertical migration**.
+It does NOT yet wire live L1 connectors to DailyMed, openFDA, RxNorm,
+LactMed, CredibleMeds, etc. Those are Sessions B–G, each scoped to one
+governed source family at a time, each fully testable on a real network
+(this delivery's sandbox cannot reach those sources). The unwired-live
+state surfaces correctly — `LiveEvidenceProvider` raises
+`KnowledgeUnavailableError`, the router applies env-aware policy,
+nothing silently degrades.
+
+### Items the SourceRegistry policy hole and L4-14 dead code findings
+
+These are tracked but unaddressed in Session A:
+- 7 missing `SourcePolicy` entries (EMA, COCHRANE, GUIDELINE, LICENSED_DB,
+  LOCAL_PROTOCOL, RU_MINZDRAV, CREDIBLEMEDS) — Session B target alongside
+  RxNorm.
+- `ExtendedClaimContractEngine.validate_evidence_id()` calls a non-existent
+  `EvidencePack.validate_chunk_id()` method, but the engine itself is dead
+  code (no caller). Session G handles either deletion or wire-and-fix.

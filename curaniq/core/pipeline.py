@@ -97,9 +97,6 @@ from curaniq.layers.L4_ai_model.adversarial_jury import (
 )
 
 # L5: Safety gate pipeline (registered — class-based 14-gate version)
-from curaniq.layers.L5_safety_gates.safety_gate_pipeline import (
-    SafetyGatePipeline as L5SafetyGatePipeline,
-)
 from curaniq.layers.L6_security.llm_client import MultiLLMClient
 from curaniq.layers.L6_security.phi_scrubber import PHIScrubber
 from curaniq.layers.L11_local_reality.drug_availability import LocalDrugAvailabilityFilter

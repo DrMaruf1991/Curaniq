@@ -1,0 +1,76 @@
+{
+  "$schema": "../schemas/fatal_error_rules.schema.json",
+  "_metadata": {
+    "title": "Fatal Medication Error Sentinel Rules — ISMP-derived",
+    "purpose": "Pattern-detection rules for known historical fatal medication errors documented in the ISMP (Institute for Safe Medication Practices) Sentinel Event database and ISMP High-Alert Medication List. Detect dangerous patterns in clinical output text BEFORE the output is delivered.",
+    "scope": "ALL environments. These are SAFETY LOGIC, not clinical recommendations or vendored data — the regex patterns ARE the rule. The rule artifact is loaded uniformly in demo, research, and clinician_prod.",
+    "snapshot_origin": "ISMP High-Alert Medication List (acute care, community/ambulatory, long-term care). ISMP Sentinel Event publications. Cross-checked against AHFS Drug Information.",
+    "snapshot_date_iso": "2026-04-25T00:00:00Z",
+    "snapshot_version": "ismp-sentinel-2026.04.25.1",
+    "source": "ISMP_SENTINEL_LIST",
+    "source_url": "https://www.ismp.org/recommendations/high-alert-medications-acute-list",
+    "license_status": "open",
+    "extraction_method": "manual_curation",
+    "is_authoritative": true,
+    "_note": "Marked authoritative because: (a) the ISMP list is a stable, slowly-changing public artifact, (b) the patterns encode the rule itself rather than a clinical fact about a drug, (c) the pattern semantics — methotrexate-daily, vincristine-IT, heparin-mg, insulin-U — are universally accepted in patient safety literature.",
+    "refresh_command": "python -m curaniq.knowledge.refresh fatal_error_rules --source ismp"
+  },
+  "rules": [
+    {
+      "drug": "methotrexate",
+      "error_class": "frequency_confusion",
+      "danger_pattern": "\\bmethotrexate\\b.{0,60}\\b(daily|every\\s+day|once\\s+daily|od|q\\.?\\s*d\\.?|qd)\\b",
+      "safe_pattern": "\\bmethotrexate\\b.{0,60}\\b(weekly|once\\s+a\\s+week|per\\s+week|qweekly|q\\.?\\s*week)\\b",
+      "message": "METHOTREXATE FATAL ERROR RISK: Methotrexate for non-oncology indications is WEEKLY, not daily. Daily dosing causes fatal bone marrow suppression. ISMP Sentinel Event.",
+      "severity": "block",
+      "ismp_reference": "ISMP Acute Care High-Alert Medication List 2024; ISMP Med Safety Alert! Acute Care 2014;19(11):1-2"
+    },
+    {
+      "drug": "colchicine",
+      "error_class": "decimal_place",
+      "danger_pattern": "\\bcolchicine\\b.{0,60}\\b(\\d+\\.?\\d*)\\s*mg\\b",
+      "message": "COLCHICINE DOSE CHECK: Doses >1.8 mg in acute gout or >0.6 mg BID in prophylaxis are associated with toxicity. Verify intended dose carefully — historic 6 mg vs 0.6 mg confusion has caused fatal multi-organ failure.",
+      "severity": "warn",
+      "extras": {
+        "max_safe_acute_mg": 1.8,
+        "max_safe_prophylaxis_per_dose_mg": 0.6
+      },
+      "ismp_reference": "ISMP Med Safety Alert! Acute Care 2010;15(20):1-3"
+    },
+    {
+      "drug": "vincristine",
+      "error_class": "route_confusion",
+      "danger_pattern": "\\bvincristine\\b.{0,60}\\b(intrathecal|IT\\s+injection|IT\\s+admin|spinal|intraventricular)\\b",
+      "message": "VINCRISTINE FATAL ROUTE ERROR: Intrathecal vincristine is ALWAYS FATAL — causes ascending paralysis and death. Vincristine is administered IV ONLY, dispensed in mini-bags per ISMP/WHO guidance. This output is BLOCKED.",
+      "severity": "emergency",
+      "ismp_reference": "ISMP/WHO Joint Statement 2007; ISMP Acute Care High-Alert Medication List 2024"
+    },
+    {
+      "drug": "heparin",
+      "error_class": "unit_confusion",
+      "danger_pattern": "\\bheparin\\b.{0,60}\\b(\\d{4,}\\s*mg|\\d+\\s*mg)\\b(?!.*units)",
+      "message": "HEPARIN UNIT CONFUSION: Heparin is dosed in UNITS, not mg. 1000 units is NOT 1000 mg. Verify unit specification — 10x and 100x overdoses from unit/mg confusion are recurring ISMP Sentinel Events.",
+      "severity": "block",
+      "ismp_reference": "ISMP Acute Care High-Alert Medication List 2024 (heparin/thrombolytics)"
+    },
+    {
+      "drug": "insulin",
+      "error_class": "unit_notation",
+      "danger_pattern": "\\binsulin\\b.{0,60}\\b\\d+\\s*U\\b",
+      "message": "INSULIN UNIT NOTATION: Always write 'units' rather than 'U' — '10U' is repeatedly misread as '100', causing 10x overdoses. ISMP-designated 'Do Not Use' abbreviation.",
+      "severity": "warn",
+      "ismp_reference": "ISMP List of Error-Prone Abbreviations, Symbols, and Dose Designations 2021"
+    },
+    {
+      "drug": "morphine",
+      "error_class": "dose_route_confusion",
+      "danger_pattern": "\\bmorphine\\b.{0,60}\\b(\\d{2,}\\s*mg|\\d+\\s*mg.{0,20}(oral|PO))\\b",
+      "message": "MORPHINE DOSE ALERT: Doses >15 mg in opioid-naive patients or unspecified-route prescriptions carry high overdose risk. Verify opioid tolerance status and route of administration.",
+      "severity": "warn",
+      "extras": {
+        "max_safe_opioid_naive_mg": 15
+      },
+      "ismp_reference": "ISMP Acute Care High-Alert Medication List 2024 (opioids); CDC Opioid Prescribing Guidelines 2022"
+    }
+  ]
+}

@@ -1,6 +1,6 @@
 # CURANIQ — Medical Evidence Operating System
 
-**State:** Integration-green. **51/51 tests passing.** Pipeline processes clinical queries end-to-end through the FastAPI surface. Postgres backbone (FIX-31, FIX-32) provides production database for source registry, evidence versioning, and tamper-evident audit ledger with verified concurrency safety.
+**State:** Integration-green. **85/85 tests passing.** Pipeline processes clinical queries end-to-end through the FastAPI surface. Postgres backbone (FIX-31, FIX-32) provides production database for source registry, evidence versioning, and tamper-evident audit ledger with verified concurrency safety. **FIX-33 (Session A) introduces the `curaniq.knowledge` provider abstraction** — clinical knowledge no longer hardcoded inside engines. L5-12 Dose Plausibility migrated end-to-end. Static-check enforcement prevents regression.
 
 ## Quick start
 
@@ -73,7 +73,11 @@ Set `CURANIQ_ENV` in `.env`:
 | `tests/test_api_e2e.py` | 9 | Live FastAPI surface: health, CQL endpoints, /query, validation |
 | `tests/test_coverage.py` | 17 | Broader scenarios: 4 interaction modes, 5 jurisdictions, pediatric/pregnancy/dialysis/allergy/polypharmacy, multilingual, concurrent threads |
 | `tests/test_db.py` | 15 | Postgres backbone: tenants, sources, evidence versioning, hash-chain audit, **tamper detection**, license expiry, fail-closed, **concurrent-write integrity** |
-| **Total** | **51** | |
+| `tests/test_postgres_enforcement_static.py` | 5 | clinician_prod static enforcement: SQLite forbidden, audit/registry must be DB-backed |
+| `tests/test_production_enforcement_contract_static.py` | 5 | clinician_prod boot tripwires: seed/mock leakage, source-sync persistence |
+| `tests/test_knowledge_contract.py` | 21 | **FIX-33** — Provenance validation, DoseBounds invariants, vendored fail-closed in prod, RouterProvider env-aware policy, all six architecture-named fatal patterns (mtx/vincristine/heparin/colchicine/insulin/morphine) |
+| `tests/test_no_hardcoded_clinical_knowledge.py` | 3 | **FIX-33** — Static check that fails the build if a new module-level UPPER_CASE clinical container is added outside the explicit allowlist |
+| **Total** | **85** | |
 
 ## Directory layout
 
@@ -84,13 +88,22 @@ curaniq/
 ├── audit/            # L9 immutable evidence ledger (JSONL + Postgres backends)
 ├── safety/           # Safety gate suite + triage gate
 ├── layers/           # 15-layer architecture (L0–L14)
+├── knowledge/        # FIX-33 — ClinicalKnowledgeProvider abstraction (provider.py,
+│                     #          vendored.py, live.py, router.py, types.py, exceptions.py)
 ├── models/           # Pydantic schemas
-├── data/             # 31 clinical JSON data files
+├── data/
+│   ├── *.json        # Original seed data (Beers, calculators, etc.)
+│   ├── clinical/     # FIX-33 — Vendored clinical snapshots WITH PROVENANCE
+│   │                 #          (refused in clinician_prod by VendoredSnapshotProvider)
+│   └── rules/        # FIX-33 — Safety-logic rule artifacts (ISMP fatal-error rules)
+│                     #          authoritative across all envs (rules ARE the safety logic)
 ├── truth_core/       # Fail-closed safety contracts (claim requirements, source registry, freshness)
 ├── db/               # Postgres backbone (FIX-31): engine, ORM models, repositories
 └── data_loader.py
 alembic/              # Database migrations (alembic upgrade head)
-tests/                # 50 tests, all passing
+docs/
+└── MIGRATION_PLAYBOOK.md  # FIX-33 — How to migrate the next engine off hardcoded constants
+tests/                # 85 tests, all passing
 docker-compose.yml    # Local Postgres for prod-like testing
 scripts/              # Static check helpers
 ```
@@ -101,7 +114,9 @@ See `CURANIQ_Architecture_v3_6_FINAL.docx` (15 layers, 181 modules, 8-layer anti
 
 See `TRUTH_CORE_HARDENING.md` for the fail-closed safety hardening summary.
 
-See `INTEGRATION_FIX_LOG.md` for the integration reconciliation that brought the engine to green.
+See `INTEGRATION_FIX_LOG.md` for the integration reconciliation that brought the engine to green (FIX-29 through FIX-33).
+
+See `docs/MIGRATION_PLAYBOOK.md` for the procedure to migrate clinical engines off hardcoded constants onto the `curaniq.knowledge` provider abstraction (FIX-33).
 
 ## Honest scope
 
