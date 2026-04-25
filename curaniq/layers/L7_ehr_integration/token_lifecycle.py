@@ -274,7 +274,7 @@ class TokenStore:
                 return True
             return False
 
-    def revoke_all_for_tenant(self, tenant_id: str, reason: str = "tenant_logout") -> int:
+    def revoke_all_for_tenant(self, tenant_id: str = "default", reason: str = "tenant_logout") -> int:
         """Revoke all tokens for a tenant (logout, security incident)."""
         with self._lock:
             count = 0
@@ -317,7 +317,7 @@ class TokenStore:
                 "expired": sum(1 for t in tokens if t.is_expired and not t.revoked),
             }
 
-    def _revoke_oldest_for_tenant(self, tenant_id: str) -> None:
+    def _revoke_oldest_for_tenant(self, tenant_id: str = "default") -> None:
         """Revoke the oldest active token for a tenant (overflow protection)."""
         oldest = None
         for tid in self._tenant_index.get(tenant_id, set()):

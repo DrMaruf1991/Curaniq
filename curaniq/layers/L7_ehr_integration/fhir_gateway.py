@@ -487,7 +487,7 @@ class FHIRResourceGateway:
         fhir_server_url: str,
         patient_id: str,
         access_token: str,
-        tenant_id: str,
+        tenant_id: str = "default",
         query_id: str = "",
         clinical_domain: str = "medication_safety",
         prefetch_data: Optional[dict[str, Any]] = None,
@@ -832,3 +832,7 @@ class SMARTAppLauncher:
             result["potassium"] = fhir_context.potassium
 
         return result
+
+
+# Backward-compatible alias expected by curaniq.core.pipeline
+FHIRGateway = FHIRResourceGateway

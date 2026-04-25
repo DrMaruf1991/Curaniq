@@ -179,7 +179,7 @@ class LocalAntibiogramEngine:
     Query: organism × antibiotic × unit → susceptibility + recommendation.
     """
 
-    def __init__(self, tenant_id: str) -> None:
+    def __init__(self, tenant_id: str = "default") -> None:
         self.tenant_id = tenant_id
         # Indexed: (organism_lower, antibiotic_lower, unit) → SusceptibilityRecord
         self._index: dict[tuple[str, str, str], SusceptibilityRecord] = {}
@@ -401,3 +401,10 @@ class LocalAntibiogramEngine:
             "reports_imported": len(self._reports),
             "regional_fallback_entries": len(_REGIONAL_FALLBACK_DATA),
         }
+
+
+# Backward-compatible alias expected by c
+# Backward-compatible wrapper expected by curaniq.core.pipeline
+class InstitutionalAntibiogram(LocalAntibiogramEngine):
+    def __init__(self, tenant_id: str = "default"):
+        super().__init__(tenant_id=tenant_id)

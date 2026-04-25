@@ -63,15 +63,24 @@ class AssumptionLedger:
     def assess_missing_context(
         self,
         query_text: str,
-        drugs: list[str],
-        patient_context: Optional[dict],
+        drugs: Optional[list[str]] = None,
+        patient_context: Optional[dict] = None,
+        drugs_mentioned: Optional[list[str]] = None,
     ) -> list[ClinicalAssumption]:
         """
         Detect missing context based on what the query needs.
         Not a static checklist — adapts to query type.
         """
         self.clear()
-        ctx = patient_context or {}
+        drugs = drugs if drugs is not None else (drugs_mentioned or [])
+        if patient_context is None:
+            ctx = {}
+        elif hasattr(patient_context, "model_dump"):
+            ctx = patient_context.model_dump()
+        elif isinstance(patient_context, dict):
+            ctx = patient_context
+        else:
+            ctx = {}
         query_lower = query_text.lower()
 
         # Renal function — needed for ANY drug dosing query

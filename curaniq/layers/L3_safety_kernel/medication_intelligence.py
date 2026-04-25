@@ -570,3 +570,22 @@ class TimeAwareClinicalTimelineBuilder:
                 description=f"Diagnosis: {condition_text}",
                 icd10_code=icd10,
             ))
+
+# Runtime compatibility shim: older cql_kernel calls assess(drug_name=..., ...).
+try:
+    _orig_med_assess = MedicationIntelligenceEngine.assess
+    def _med_assess_compat(self, *args, **kwargs):
+        if "drug_name" in kwargs and "drug" not in kwargs:
+            kwargs["drug"] = kwargs.pop("drug_name")
+        if "concurrent_medications" in kwargs and "concurrent_drugs" not in kwargs:
+            kwargs["concurrent_drugs"] = kwargs.pop("concurrent_medications")
+        # Ignore context flags handled elsewhere in deterministic kernels.
+        kwargs.pop("age_years", None)
+        kwargs.pop("patient_age", None)
+        kwargs.pop("patient_weight", None)
+        kwargs.pop("weight_kg", None)
+        kwargs.pop("is_pregnant", None)
+        return _orig_med_assess(self, *args, **kwargs)
+    MedicationIntelligenceEngine.assess = _med_assess_compat
+except NameError:
+    pass

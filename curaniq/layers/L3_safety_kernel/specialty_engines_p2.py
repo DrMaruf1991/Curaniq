@@ -42,7 +42,7 @@ class AntimicrobialAssessment:
     aware_category: AWaReCategory
     spectrum: str
     is_appropriate: bool
-    recommendation: str
+    recommendation: str = ""
     deescalation_option: Optional[str] = None
     duration_guidance: str = ""
     source: str = ""
@@ -174,6 +174,19 @@ class OncologyChemoSafetyEngine:
         "cisplatin":   {"max_notes": "No absolute max but cumulative nephro/ototoxicity", "toxicity": "Nephrotoxicity, ototoxicity, neuropathy", "monitoring": "Audiometry, eGFR before each cycle", "source": "NCCN"},
     }
 
+    def __init__(self):
+        # FIX-29: methods reference self._emetogenicity / self._cumulative_limits
+        # but class-level constants are uppercase. Load from JSON if available,
+        # else fall back to the inline class-level data.
+        from curaniq.data_loader import load_json_data
+        try:
+            raw = load_json_data("oncology_safety.json")
+            self._emetogenicity = raw.get("emetogenicity", self.EMETOGENICITY)
+            self._cumulative_limits = raw.get("cumulative_limits", self.CUMULATIVE_LIMITS)
+        except Exception:
+            self._emetogenicity = self.EMETOGENICITY
+            self._cumulative_limits = self.CUMULATIVE_LIMITS
+
     def calculate_bsa(self, height_cm: float, weight_kg: float) -> float:
         """DuBois formula: BSA (m2) = 0.007184 * H^0.725 * W^0.425"""
         return round(0.007184 * (height_cm ** 0.725) * (weight_kg ** 0.425), 2)
@@ -232,6 +245,10 @@ class PsychSafetyAlert:
 
 
 class PsychiatricSafetyEngine:
+    def __init__(self) -> None:
+        # Loaded-data compatibility default. Populate from data layer later.
+        self._serotonergic_drugs = {}
+
     """
     L3-15: Psychiatric medication-specific safety.
 
@@ -335,6 +352,21 @@ class SubstanceUseSafetyEngine:
          "Source: Product labels"),
     ]
 
+    def __init__(self):
+        # FIX-29: methods reference self._combinations; load from JSON, fall back to class constant.
+        from curaniq.data_loader import load_json_data
+        try:
+            raw = load_json_data("specialty_clinical_rules.json")
+            cfg = raw.get("substance_use_combinations", [])
+            # Convert dict format to tuple format expected by assess_combinations
+            self._combinations = [
+                (item.get("drug_a", ""), item.get("drug_b_class", item.get("drug_b", "")),
+                 item.get("severity", "major"), item.get("message", item.get("conflict", "")))
+                for item in cfg
+            ] if cfg else self.DANGEROUS_COMBINATIONS
+        except Exception:
+            self._combinations = self.DANGEROUS_COMBINATIONS
+
     def assess_combinations(self, drugs: list[str]) -> list[dict]:
         """Check for substance-use-specific dangerous combinations."""
         alerts = []
@@ -373,6 +405,15 @@ class MultiMorbidityResolver:
     # Cross-disease contraindication rules
     # Format: (condition_A, treatment_for_A, condition_B, conflict, recommendation)
     # Source: NICE NG56; clinical pharmacology literature
+
+    def __init__(self):
+        # FIX-29: methods reference self._conflict_rules; load from JSON.
+        from curaniq.data_loader import load_json_data
+        try:
+            raw = load_json_data("specialty_clinical_rules.json")
+            self._conflict_rules = raw.get("multimorbidity_conflicts", [])
+        except Exception:
+            self._conflict_rules = []
 
     def check_conflicts(self, conditions: list[str], drugs: list[str]) -> list[dict]:
         """Check for multi-morbidity treatment conflicts."""
@@ -557,6 +598,20 @@ class TemporalLogicVerifier:
     Uses event sequence checking (not full LTL model checking).
     """
 
+    def __init__(self):
+        # FIX-29: methods reference self._sequence_rules; load from JSON.
+        from curaniq.data_loader import load_json_data
+        try:
+            raw = load_json_data("specialty_clinical_rules.json")
+            cfg = raw.get("temporal_safety_rules", [])
+            # Convert dict→tuple expected by check_sequence
+            self._sequence_rules = [
+                (r.get("drug_a", ""), r.get("drug_b", ""), r.get("min_gap_hours", 0),
+                 r.get("direction", "either"), r.get("reason", ""))
+                for r in cfg
+            ]
+        except Exception:
+            self._sequence_rules = []
 
     def check_sequence(self, events: list[dict]) -> list[dict]:
         """

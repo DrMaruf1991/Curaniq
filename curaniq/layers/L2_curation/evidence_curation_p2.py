@@ -62,6 +62,9 @@ class OntologyCrossMapValidator:
         raw = load_json_data("curation_reference_data.json")
         self.AMBIGUOUS_MAPPINGS = raw.get("ambiguous_mappings", {})
         self.ATC_RXNORM_CLASS = raw.get("atc_rxnorm_class", {})
+        # FIX-29: lowercase aliases used by validate_mapping()
+        self._ambiguous   = self.AMBIGUOUS_MAPPINGS
+        self._atc_rxnorm  = self.ATC_RXNORM_CLASS
 
     def validate_mapping(
         self,
@@ -166,6 +169,7 @@ class GuidelineConflictResolver:
                 source_priority=c.get("source",""),
             ) for c in raw.get("guideline_conflicts", [])
         ]
+        self._conflicts = self.KNOWN_CONFLICTS
 
     def find_conflicts(self, topic: str) -> list[GuidelineConflict]:
         """Find known guideline conflicts related to a topic."""
@@ -272,6 +276,8 @@ class ConceptDriftMonitor:
         from curaniq.data_loader import load_json_data
         raw = load_json_data("curation_reference_data.json")
         self.KNOWN_DRIFTS = raw.get("concept_drifts", [])
+        # FIX-29: lowercase alias used by check_for_drift()
+        self._drifts = self.KNOWN_DRIFTS
 
     def check_for_drift(self, concept: str) -> list[dict]:
         """Check if a concept has undergone definitional drift."""

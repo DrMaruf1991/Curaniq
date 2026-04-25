@@ -182,7 +182,7 @@ class ShadowDeploymentEngine:
 
     def __init__(
         self,
-        tenant_id: str,
+        tenant_id: str = "default",
         min_encounters_for_live: int = 1000,
     ) -> None:
         self.tenant_id = tenant_id

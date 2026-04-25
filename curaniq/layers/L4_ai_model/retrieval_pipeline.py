@@ -681,3 +681,7 @@ class EvidenceHashLockEnforcer:
                 if b.rejection_reason and "HALLUCINATED" in b.rejection_reason
             ),
         }
+
+
+# Backward-compatible alias expected by curaniq.core.pipeline
+HybridRetrievalPipeline = HybridRetriever

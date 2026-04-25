@@ -541,3 +541,19 @@ class DrugFoodHerbEngine:
             lines.append(f"   Effect: {ix.effect}")
             lines.append(f"   Management: {ix.management}")
         return "\n".join(lines)
+
+# Runtime compatibility shim: older cql_kernel expects QTProlongationEngine.check().
+def _qt_check(self, drugs: list[str], patient_factors: dict | None = None):
+    pf = patient_factors or {}
+    return self.assess(
+        drugs=drugs,
+        qtc_ms=pf.get("qtc_ms") or pf.get("qtc"),
+        age_years=pf.get("age"),
+        is_female=(str(pf.get("sex", "")).upper() == "F"),
+        serum_k=pf.get("potassium") or pf.get("serum_k"),
+    )
+
+try:
+    QTProlongationEngine.check = _qt_check  # type: ignore[name-defined, assignment]
+except NameError:
+    pass

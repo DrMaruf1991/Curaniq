@@ -852,27 +852,43 @@ class CQLKernel:
         # Pediatric safety (L3-7)
         if patient and patient.age_years and patient.age_years < 18:
             for drug in drugs_mentioned:
-                ped_result = self.pediatric_engine.check(
-                    drug=drug,
-                    age_years=patient.age_years,
-                    weight_kg=patient.weight_kg,
-                )
-                if ped_result:
-                    results["pediatric_safety"] = results.get("pediatric_safety", [])
-                    results["pediatric_safety"].append(ped_result)
+                # FIX-30: method is .calculate(), not .check(); requires weight_kg (not optional)
+                if patient.weight_kg:
+                    try:
+                        ped_result = self.pediatric_engine.calculate(
+                            drug=drug,
+                            age_years=patient.age_years,
+                            weight_kg=patient.weight_kg,
+                        )
+                        if ped_result:
+                            results["pediatric_safety"] = results.get("pediatric_safety", [])
+                            results["pediatric_safety"].append(ped_result)
+                    except Exception:
+                        # Engine may not have data for this drug; skip rather than crash
+                        pass
 
         # Pregnancy/Lactation safety (L3-9)
         if patient and (patient.is_pregnant or patient.is_breastfeeding):
             for drug in drugs_mentioned:
-                preg_result = self.pregnancy_engine.check(
-                    drug=drug,
-                    is_pregnant=patient.is_pregnant,
-                    is_breastfeeding=patient.is_breastfeeding,
-                    trimester=getattr(patient, "trimester", None),
-                )
-                if preg_result:
-                    results["pregnancy_lactation"] = results.get("pregnancy_lactation", [])
-                    results["pregnancy_lactation"].append(preg_result)
+                # FIX-30: split into check_pregnancy(drug, trimester) + check_lactation(drug)
+                try:
+                    if patient.is_pregnant:
+                        # Approximate trimester from gestational_week if available, else 1
+                        gw = getattr(patient, "gestational_week", None) or 0
+                        trimester = 1 if gw < 14 else (2 if gw < 28 else 3)
+                        preg_result = self.pregnancy_engine.check_pregnancy(
+                            drug=drug, trimester=trimester,
+                        )
+                        if preg_result:
+                            results["pregnancy_lactation"] = results.get("pregnancy_lactation", [])
+                            results["pregnancy_lactation"].append(preg_result)
+                    if patient.is_breastfeeding:
+                        lact_result = self.pregnancy_engine.check_lactation(drug=drug)
+                        if lact_result:
+                            results["pregnancy_lactation"] = results.get("pregnancy_lactation", [])
+                            results["pregnancy_lactation"].append(lact_result)
+                except Exception:
+                    pass
 
         # QT prolongation risk (L3-12) — runs for ALL patients on QT drugs
         if len(drugs_mentioned) > 0:

@@ -88,7 +88,7 @@ class LocalFormulary:
     When a recommended drug is NOT on formulary, suggests alternatives.
     """
 
-    def __init__(self, tenant_id: str) -> None:
+    def __init__(self, tenant_id: str = "default") -> None:
         self.tenant_id = tenant_id
         self._entries: dict[str, FormularyEntry] = {}  # normalized_name → entry
 
@@ -204,7 +204,7 @@ class InstitutionalProtocol:
 class ProtocolStore:
     """Per-tenant protocol storage with version history."""
 
-    def __init__(self, tenant_id: str) -> None:
+    def __init__(self, tenant_id: str = "default") -> None:
         self.tenant_id = tenant_id
         self._protocols: dict[str, InstitutionalProtocol] = {}
         self._history: dict[str, list[InstitutionalProtocol]] = defaultdict(list)
@@ -272,7 +272,7 @@ class OverrideAnalyzer:
 
     REVIEW_THRESHOLD: float = 0.60  # >60% override rate → flag
 
-    def __init__(self, tenant_id: str) -> None:
+    def __init__(self, tenant_id: str = "default") -> None:
         self.tenant_id = tenant_id
         self._records: list[OverrideRecord] = []
         # Tracking: recommendation_key → {overridden: int, accepted: int}
@@ -358,7 +358,7 @@ class SpecialistPreferenceLearner:
     Only applies when multiple safe options exist.
     """
 
-    def __init__(self, tenant_id: str) -> None:
+    def __init__(self, tenant_id: str = "default") -> None:
         self.tenant_id = tenant_id
         # (department, drug_category) → {drug_name: count}
         self._freq: dict[tuple[str, str], dict[str, int]] = defaultdict(lambda: defaultdict(int))
@@ -429,7 +429,7 @@ class InstitutionalKnowledgeEngine:
     Per-tenant isolation: each hospital gets its own instance.
     """
 
-    def __init__(self, tenant_id: str) -> None:
+    def __init__(self, tenant_id: str = "default") -> None:
         self.tenant_id = tenant_id
         self.formulary = LocalFormulary(tenant_id)
         self.protocols = ProtocolStore(tenant_id)

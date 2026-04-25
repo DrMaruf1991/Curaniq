@@ -286,6 +286,18 @@ def openfda_drug_label(drug_name: str) -> list[dict]:
     result = data["results"][0]
     sections = []
 
+    # FDA label effective_time is the label/source update date when present.
+    # It is NOT the same as the retrieval/verification timestamp.
+    effective_time = result.get("effective_time") or result.get("set_id") or ""
+    source_last_updated_at = None
+    if isinstance(effective_time, str) and len(effective_time) >= 8 and effective_time[:8].isdigit():
+        try:
+            source_last_updated_at = datetime(
+                int(effective_time[:4]), int(effective_time[4:6]), int(effective_time[6:8]), tzinfo=timezone.utc
+            )
+        except ValueError:
+            source_last_updated_at = None
+
     # Extract brand name
     brand = ""
     openfda = result.get("openfda", {})
@@ -305,6 +317,8 @@ def openfda_drug_label(drug_name: str) -> list[dict]:
                     "brand": brand,
                     "source": "FDA Drug Label (DailyMed/SPL)",
                     "url": f"https://api.fda.gov/drug/label.json?search=openfda.generic_name:%22{urllib.parse.quote(drug_name)}%22",
+                    "source_last_updated_at": source_last_updated_at,
+                    "source_version": str(result.get("set_id") or result.get("id") or "unknown"),
                 })
 
     return sections
@@ -387,8 +401,10 @@ def retrieve_evidence(
                 "snippet_hash": hashlib.sha256(snippet.encode("utf-8")).hexdigest(),
                 "url": section.get("url", ""),
                 "authors": ["U.S. Food and Drug Administration"],
-                "published_date": now,  # Labels are always current
-                "tier": "guideline",  # FDA labels = regulatory guideline level
+                "published_date": section.get("source_last_updated_at"),
+                "source_last_updated_at": section.get("source_last_updated_at"),
+                "source_version": section.get("source_version"),
+                "tier": "guideline",  # FDA labels = regulatory/label-grade evidence
                 "jurisdiction": "US",
                 "last_verified_at": now,
                 "staleness_ttl_hours": 24,

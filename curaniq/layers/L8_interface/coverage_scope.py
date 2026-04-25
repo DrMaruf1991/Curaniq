@@ -82,6 +82,10 @@ class MedicationCoverageScopeFence:
         self.VALIDATED_ATC_PREFIXES = raw.get("validated_atc_prefixes", {})
         self.DRUG_ATC_MAP = raw.get("drug_atc_map", {})
         self.OUT_OF_SCOPE_PATTERNS = [_re.compile(p, _re.I) for p in raw.get("out_of_scope_patterns", [])]
+        # Backward-compatible internal aliases used by check_scope().
+        self._atc_prefixes = self.VALIDATED_ATC_PREFIXES
+        self._drug_atc = self.DRUG_ATC_MAP
+        self._out_of_scope = self.OUT_OF_SCOPE_PATTERNS
 
     def check_scope(self, drugs: list[str], query_text: str = "") -> ScopeCheckResult:
         """Check if all drugs and the query are within validated scope."""

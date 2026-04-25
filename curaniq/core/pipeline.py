@@ -106,6 +106,8 @@ from curaniq.layers.L11_local_reality.drug_availability import LocalDrugAvailabi
 from curaniq.layers.L14_interaction.session_memory import ClinicalSessionMemory, AssumptionLedger
 from curaniq.layers.L6_security.phi_scrubber import OutputExfiltrationScanner
 from curaniq.safety.safety_gates import SafetyGateSuiteRunner
+from curaniq.truth_core.config import TruthCorePolicy
+from curaniq.db.production import enforce_production_boot
 
 # ── NEW: L0 Regulatory Foundation ──
 from curaniq.layers.L0_regulatory.qms_risk import (
@@ -572,8 +574,11 @@ class CURANIQPipeline:
         self.adversarial_jury       = AdversarialLLMJury.from_environment()
         self.l4_confidence_scorer   = L4ConfidenceScorer()
 
-        # Load seed evidence for demo/dev
-        if not evidence_store:
+        # Load seed evidence only when Truth Core policy permits it.
+        # In clinician_prod, no seed/demo evidence may enter the clinical path.
+        self.truth_policy = TruthCorePolicy.from_environment()
+        self.production_readiness_report = enforce_production_boot()
+        if not evidence_store and self.truth_policy.allow_seed_evidence:
             self.retriever.load_seed_evidence()
 
         # ── L0: Regulatory Foundation ──
@@ -874,6 +879,11 @@ class CURANIQPipeline:
             mode=mode,
             sub_queries=sub_queries[1:],
         )
+
+        # Initialize deterministic safety context early so pre-CQL enrichment
+        # stages can attach metadata without UnboundLocalError. Stage 6 later
+        # replaces/extends it with full CQL outputs.
+        cql_results: dict[str, Any] = {"computation_logs": []}
 
         # ═══════════════════════════════════════════════════════════════
         # STAGE 5.1: L14-3 Assumption Ledger

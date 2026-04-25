@@ -434,3 +434,7 @@ class CitationVerifier:
                 matched = next((r for r in verification_results if r.claim_id == claim.claim_id), None)
                 claim.suppression_reason = matched.mismatch_details if matched else "Citation verification failed"
         return output
+
+
+# Backward-compatible alias expected by curaniq.core.pipeline
+ConstrainedLLMGenerator = ConstrainedGenerator

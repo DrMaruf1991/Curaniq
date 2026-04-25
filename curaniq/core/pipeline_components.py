@@ -13,6 +13,9 @@ from typing import Any, Optional
 from uuid import UUID, uuid4
 
 from curaniq.layers.L1_evidence_ingestion.evidence_retriever import retrieve_evidence
+from curaniq.truth_core.config import TruthCorePolicy
+from curaniq.truth_core.claim_requirements import infer_claim_type_from_query
+from curaniq.truth_core.freshness import FreshnessEnforcementService
 
 from curaniq.models.schemas import (
     ClinicalQuery,
@@ -204,10 +207,69 @@ class HybridRetriever:
             evidence_store: In-memory evidence store (production: pgvector + Elasticsearch)
         """
         self._store: list[EvidenceObject] = evidence_store or []
+        self._policy = TruthCorePolicy.from_environment()
+        self._freshness_enforcer = FreshnessEnforcementService(policy=self._policy)
+        self._use_evidence_db = (self._policy.environment.value == "clinician_prod") or (__import__("os").environ.get("CURANIQ_EVIDENCE_DB", "").lower() in ("1", "true", "yes"))
 
     def add_evidence(self, evidence: EvidenceObject) -> None:
+        # Evidence added manually is in-memory only; production retrieval persists live evidence separately.
         """Add evidence to the retriever store."""
         self._store.append(evidence)
+
+    def _persist_live_evidence_to_db(self, objects: list[EvidenceObject]) -> list[EvidenceObject]:
+        """Persist live evidence into the production evidence DB and return DB-id locked objects.
+
+        In clinician_prod this is mandatory. In demo/research it is optional via
+        CURANIQ_EVIDENCE_DB=1. If persistence fails in clinician_prod, retrieval
+        returns no evidence so the answer path fails closed.
+        """
+        if not self._use_evidence_db or not objects:
+            return objects
+        try:
+            from curaniq.db import get_session, SourceRepository, EvidenceRepository
+            with get_session() as s:
+                srepo = SourceRepository(s)
+                erepo = EvidenceRepository(s)
+                persisted: list[EvidenceObject] = []
+                for obj in objects:
+                    src = srepo.by_type(obj.source_type.value)
+                    if src is None:
+                        src = srepo.upsert(
+                            source_type=obj.source_type.value,
+                            display_name=obj.source_type.value,
+                            authority_level=2,
+                            jurisdictions=[obj.jurisdiction.value],
+                            ttl_seconds=(obj.staleness_ttl_hours or 24) * 3600,
+                            license_status=obj.license_status or "unknown",
+                            fail_closed_high_risk=True,
+                        )
+                    db_ev, _created = erepo.upsert_evidence(
+                        source_id=src.id,
+                        external_id=obj.source_id,
+                        title=obj.title,
+                        snippet=obj.snippet,
+                        url=obj.url,
+                        authors=obj.authors,
+                        tier=obj.tier.value,
+                        grade=obj.grade.value if obj.grade else None,
+                        jurisdiction=obj.jurisdiction.value,
+                        published_date=obj.published_date,
+                        source_last_updated_at=obj.source_last_updated_at,
+                        source_version=obj.source_version,
+                        license_status=obj.license_status or "unknown",
+                        staleness_ttl_hours=obj.staleness_ttl_hours,
+                    )
+                    obj.evidence_id = db_ev.id
+                    obj.snippet_hash = db_ev.snippet_hash
+                    obj.content_hash = db_ev.snippet_hash
+                    obj.last_verified_at = db_ev.last_verified_at
+                    obj.superseded_by = str(db_ev.superseded_by_id) if db_ev.superseded_by_id else None
+                    persisted.append(obj)
+                return persisted
+        except Exception:
+            if self._policy.environment.value == "clinician_prod":
+                return []
+            return objects
 
     def retrieve(
         self,
@@ -218,11 +280,11 @@ class HybridRetriever:
         """
         L4-1: Hybrid evidence retrieval.
         
-        1. Try real APIs (PubMed + OpenFDA) if available
-        2. Fall back to seed evidence if APIs fail
-        3. Empty evidence = L5-3 No-Evidence Refusal Gate blocks response
-        
-        Evidence sources are never hardcoded. APIs called in real-time.
+        1. Try real APIs (PubMed + OpenFDA) if available.
+        2. In demo/research mode, optionally fall back to seed evidence.
+        3. In clinician_prod mode, fail closed if governed current evidence is insufficient.
+
+        Evidence sources are governed by Truth Core policy.
         """
         # Extract drugs and foods from the query for targeted retrieval
         drugs: list[str] = []
@@ -270,6 +332,9 @@ class HybridRetriever:
                         url=ev.get("url", ""),
                         authors=ev.get("authors", []),
                         published_date=ev.get("published_date"),
+                        source_last_updated_at=ev.get("source_last_updated_at"),
+                        source_version=ev.get("source_version"),
+                        retrieved_at=datetime.now(timezone.utc),
                         tier=tier_map.get(ev.get("tier", "cohort"), EvidenceTier.COHORT),
                         jurisdiction=Jurisdiction(ev.get("jurisdiction", "INT")),
                         last_verified_at=ev.get("last_verified_at", datetime.now(timezone.utc)),
@@ -280,16 +345,45 @@ class HybridRetriever:
                     continue
 
             if objects:
-                return EvidencePack(
+                objects = self._persist_live_evidence_to_db(objects)
+                if not objects:
+                    return EvidencePack(
+                        pack_id=uuid4(),
+                        query_id=query.query_id,
+                        objects=[],
+                        retrieval_strategy="fail_closed_evidence_db_persistence_failed",
+                        total_candidates_considered=len(real_evidence),
+                    )
+                pack = EvidencePack(
                     pack_id=uuid4(),
                     query_id=query.query_id,
                     objects=objects,
                     retrieval_strategy="pubmed_openfda_live",
                     total_candidates_considered=len(real_evidence),
                 )
+                claim_type = infer_claim_type_from_query(query.raw_text)
+                validation = self._freshness_enforcer.validate_pack_for_claim(pack, claim_type)
+                if validation.passed or not self._policy.environment.value == "clinician_prod":
+                    return pack
+                return EvidencePack(
+                    pack_id=uuid4(),
+                    query_id=query.query_id,
+                    objects=[],
+                    retrieval_strategy="fail_closed_truth_core: " + self._freshness_enforcer.fail_closed_message(validation),
+                    total_candidates_considered=len(real_evidence),
+                )
 
-        # Fall back to seed evidence (BM25-like matching)
-        return self._retrieve_from_seed(query, mode, sub_queries)
+        # Fall back to seed evidence only when policy permits it.
+        if self._policy.allow_seed_evidence:
+            return self._retrieve_from_seed(query, mode, sub_queries)
+
+        return EvidencePack(
+            pack_id=uuid4(),
+            query_id=query.query_id,
+            objects=[],
+            retrieval_strategy="fail_closed_no_live_evidence_seed_disabled",
+            total_candidates_considered=len(real_evidence),
+        )
 
     def _retrieve_from_seed(
         self,
@@ -297,7 +391,37 @@ class HybridRetriever:
         mode: InteractionMode,
         sub_queries: Optional[list[str]] = None,
     ) -> EvidencePack:
-        """Fall back to in-memory seed evidence when APIs unavailable."""
+        """Policy-gated in-memory retrieval for demo/research only."""
+        if not self._policy.allow_seed_evidence:
+            return EvidencePack(
+                pack_id=uuid4(),
+                query_id=query.query_id,
+                objects=[],
+                retrieval_strategy="fail_closed_seed_evidence_disabled",
+                total_candidates_considered=0,
+            )
+
+        terms = [query.raw_text.lower()]
+        if sub_queries:
+            terms.extend(q.lower() for q in sub_queries)
+        query_tokens = set(re.findall(r"[a-zA-Z0-9]+", " ".join(terms)))
+
+        scored: list[tuple[int, EvidenceObject]] = []
+        for ev in self._store:
+            haystack = f"{ev.title} {ev.snippet} {ev.source_id}".lower()
+            score = sum(1 for tok in query_tokens if len(tok) > 2 and tok in haystack)
+            if score > 0:
+                scored.append((score, ev))
+        scored.sort(key=lambda item: item[0], reverse=True)
+        selected = [ev for _, ev in scored[:MODE_RETRIEVAL_LIMITS.get(mode, 5)]]
+        return EvidencePack(
+            pack_id=uuid4(),
+            query_id=query.query_id,
+            objects=selected,
+            retrieval_strategy="seed_demo_only_bm25_like",
+            total_candidates_considered=len(self._store),
+        )
+
     def load_seed_evidence(self) -> None:
         """
         Load a curated seed evidence set for the core clinical domains.
@@ -561,6 +685,7 @@ class ConstrainedGenerator:
             llm_client: Anthropic/OpenAI client. If None, returns structured mock.
         """
         self._llm_client = llm_client
+        self._policy = TruthCorePolicy.from_environment()
 
     def generate(
         self,
@@ -598,8 +723,13 @@ class ConstrainedGenerator:
             # Production: call actual LLM API
             return self._call_llm(query.raw_text, evidence_text, patient_text, mode, cql_results)
         else:
-            # Test/demo: return structured mock response based on evidence content
-            # Mock mode: no real LLM → no cross-LLM agreement. Conservative baseline.
+            if not self._policy.allow_mock_llm:
+                return (
+                    "Clinician production safety refusal: no verified LLM provider is configured. "
+                    "Mock generation is disabled in clinician_prod mode.",
+                    0.0,
+                )
+            # Test/demo: return structured mock response based on evidence content.
             return self._mock_response(query, evidence_pack, cql_results), 0.50
 
     def _format_evidence_pack(self, pack: EvidencePack) -> str:
@@ -633,6 +763,71 @@ class ConstrainedGenerator:
             parts.append(f"Current meds: {', '.join(ctx.active_medications[:10])}")
         if ctx.conditions:    parts.append(f"Conditions: {', '.join(ctx.conditions[:5])}")
         return " | ".join(parts)
+
+    def _format_cql_safety(self, cql_results: Optional[dict]) -> str:
+        """
+        FIX-29: was missing — referenced by _mock_response and _call_llm.
+        Renders CQL deterministic outputs into a compact text block for prompt
+        injection. Format is human-readable and structured enough that the
+        L4 generator can quote/cite specific items.
+        """
+        if not cql_results:
+            return "No CQL deterministic outputs available."
+        lines: list[str] = []
+        # Renal dose adjustments
+        renal = cql_results.get("renal_dose_results") or cql_results.get("renal_results")
+        if renal:
+            lines.append("[RENAL DOSING]")
+            if isinstance(renal, list):
+                for r in renal[:5]:
+                    if isinstance(r, dict):
+                        lines.append(f"  - {r.get('drug','?')}: {r.get('action','?')} (eGFR {r.get('egfr','?')})")
+                    else:
+                        lines.append(f"  - {str(r)[:200]}")
+            elif isinstance(renal, dict):
+                for k, v in list(renal.items())[:5]:
+                    lines.append(f"  - {k}: {str(v)[:200]}")
+        # DDI / contraindications
+        ddi = cql_results.get("ddi_results") or cql_results.get("contraindication_results")
+        if ddi:
+            lines.append("[DRUG INTERACTIONS / CONTRAINDICATIONS]")
+            if isinstance(ddi, list):
+                for d in ddi[:5]:
+                    lines.append(f"  - {str(d)[:200]}")
+        # Allergy / cross-reactivity
+        allergies = cql_results.get("allergy_assessments") or cql_results.get("allergy_results")
+        if allergies:
+            lines.append("[ALLERGY ASSESSMENTS]")
+            if isinstance(allergies, list):
+                for a in allergies[:3]:
+                    lines.append(f"  - {str(a)[:200]}")
+        # QT risk
+        qt = cql_results.get("qt_assessment_detailed") or cql_results.get("qt_assessment")
+        if qt:
+            lines.append("[QT PROLONGATION]")
+            lines.append(f"  - {str(qt)[:300]}")
+        # Pregnancy / lactation
+        preg = cql_results.get("pregnancy_lactation")
+        if preg:
+            lines.append("[PREGNANCY / LACTATION]")
+            if isinstance(preg, list):
+                for p in preg[:3]:
+                    lines.append(f"  - {str(p)[:200]}")
+        # Medication intelligence
+        med = cql_results.get("medication_intelligence")
+        if med:
+            lines.append("[MEDICATION INTELLIGENCE]")
+            if isinstance(med, list):
+                for m in med[:3]:
+                    lines.append(f"  - {str(m)[:200]}")
+        # Safety flags
+        flags = cql_results.get("safety_flags")
+        if flags:
+            lines.append(f"[SAFETY FLAGS] {flags}")
+
+        if not lines:
+            return "No safety issues detected by CQL deterministic kernel."
+        return "\n".join(lines)
 
     def _mock_response(
         self,
