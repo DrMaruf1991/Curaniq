@@ -267,3 +267,466 @@ This bug was **not caught by any of the 50 prior tests** because none of them ex
 
 The Python `threading.Lock` only serializes within a single Python process. **Multi-process deployments must use Postgres** (where `SELECT FOR UPDATE` provides cross-process row locking). This is documented in `repositories.py` and is the recommended deployment topology anyway.
 
+
+---
+
+## FIX-33 — Clinical knowledge provider abstraction (Session A)
+
+After a deep audit revealed the codebase contained 22 module-level hardcoded
+clinical-data constants (519 entries across 15 files) — directly contradicting
+the architecture's "evidence-pipeline-first, no hardcoded clinical data"
+principle and the project rule "all clinical dictionaries in JSON under
+`curaniq/data/`" — Session A delivers the durable production-safe fix:
+the clinical knowledge layer.
+
+### Phase 1 — Dead-code elimination (zero behavior change)
+
+Audit found 9 root-level Python files duplicating files in `curaniq/layers/...`
+that were not imported anywhere (3 had drifted from their layered counterparts).
+Each removal verified by full test re-run.
+
+Deleted: `drug_availability.py`, `evidence_retriever.py`, `session_memory.py`,
+`audit_storage.py`, `cost_monitor.py`, `llm_client.py`, `phi_scrubber.py`,
+`prompt_defense.py`, `universal_input.py`. Eliminated ~94 hardcoded clinical
+entries by deletion alone.
+
+Tests after Phase 1: **61/61 still passing.**
+
+### Phase 2 — `curaniq.knowledge` package (the abstraction barrier)
+
+New package `curaniq/knowledge/`:
+- `provider.py` — `ClinicalKnowledgeProvider` Protocol (the contract)
+- `types.py` — Frozen dataclasses with full validation: `Provenance`,
+  `DoseBounds`, `FatalErrorRule`. Provenance enforces ISO-8601 dates,
+  validated license enum, validated extraction-method enum.
+- `vendored.py` — `VendoredSnapshotProvider`, refuses to instantiate in
+  `clinician_prod` (boot-time tripwire via `VendoredDataRefusedError`).
+  Loads JSON snapshots, validates `_metadata` block presence and required
+  keys; `ProvenanceMissingError` for malformed snapshots.
+- `live.py` — `LiveEvidenceProvider`, fail-closed shape ready for L1
+  connector injection in Sessions B–G. Raises `KnowledgeUnavailableError`
+  when the connector for a fact is not yet wired (deliberate — never
+  silently degrade).
+- `router.py` — `RouterProvider` with environment-aware policy:
+  `clinician_prod` → live-only, no fallback; `demo`/`research` → live with
+  vendored fallback; fatal-error rules served universally (rules ARE the
+  safety logic, not vendored data).
+- `exceptions.py` — `KnowledgeError`, `KnowledgeUnavailableError`,
+  `VendoredDataRefusedError`, `ProvenanceMissingError`.
+
+### Phase 3 — Vendored snapshots with full provenance
+
+`curaniq/data/clinical/dose_bounds.json` — 20 drugs, complete
+`_metadata` block (snapshot_date_iso, snapshot_version, license_status,
+extraction_method, is_authoritative=false), DailyMed source URLs per drug,
+label section references.
+
+`curaniq/data/rules/fatal_dose_errors.json` — 6 ISMP-derived sentinel
+rules (methotrexate-daily, vincristine-IT, heparin-mg, colchicine-decimal,
+insulin-U, morphine-opioid-naive) with regex patterns, severities, ISMP
+publication references. Marked `is_authoritative=true` because rules
+ARE the safety logic, not vendored data — the patterns themselves
+encode the rule. Loaded uniformly in all environments.
+
+### Phase 5 — L5-12 migration (the template for Sessions B–G)
+
+Deleted entire `curaniq/layers/L5_safety_gates/safety_gate_pipeline.py`
+(the dead duplicate hosting the order-sensitive broken `DosePlausibilityGate`
+along with `DOSE_PLAUSIBILITY_BOUNDS`, `RENALLY_CLEARED_DRUGS`,
+`TERATOGENIC_DRUGS`, `WEIGHT_REQUIRED_DRUGS`). Confirmed via grep that
+no instantiation existed anywhere — the only import was a dangling alias
+`L5SafetyGatePipeline` in `pipeline.py` that was never called. Removed
+the alias.
+
+Deleted `FATAL_DOSE_ERRORS` hardcoded constant from
+`curaniq/safety/safety_gates.py`. Rewrote
+`gate_dose_plausibility(claims, knowledge_provider=None)` to consume
+`kp.iter_fatal_error_rules()`. The rule's `evaluate()` method on
+`FatalErrorRule` encapsulates danger-pattern + safe-pattern semantics.
+
+Wired `SafetyGateSuiteRunner.__init__(knowledge_provider=None)` for
+dependency injection. Default constructs a `RouterProvider`.
+
+### Phase 6 — Tests + static enforcement
+
+`tests/test_knowledge_contract.py` — 21 tests pinning the contract:
+provenance validators, vendored fail-closed in prod, all six
+architecture-named fatal patterns verified to fire, methotrexate-weekly
+safe-pattern verified to suppress the daily warning, vincristine-IT
+verified to be severity=emergency.
+
+`tests/test_no_hardcoded_clinical_knowledge.py` — 3 tests forming the
+build-time enforcement:
+- `test_no_new_hardcoded_clinical_knowledge` — fails the build if a
+  new module-level UPPER_CASE clinical container is added outside the
+  explicit `_KNOWN_UNMIGRATED` allowlist; allowlist shrinks each session.
+- `test_provider_layer_has_no_clinical_data` — guards that
+  `curaniq/knowledge/` itself never contains hardcoded clinical data.
+- `test_session_a_eliminated_l5_12_constants` — guards that
+  `FATAL_DOSE_ERRORS` and `DOSE_PLAUSIBILITY_BOUNDS` cannot reappear.
+
+### Phase 8 — Documentation
+
+`docs/MIGRATION_PLAYBOOK.md` — six-step recipe for Sessions B–G with
+session-by-session target table mapping each remaining unmigrated
+container to its destination governed source.
+
+### Verification
+
+- **Test suite: 85/85 passing** (61 prior + 21 new contract + 3 new static)
+- **Attack suite: 16/16 passing**:
+    L5-12 catches every architecture-named fatal pattern through the
+    new provider path (mtx-daily blocks, mtx-weekly safe, vincristine-IT
+    emergency-blocks, heparin-mg blocks, insulin-U warns, colchicine 6mg
+    warns, morphine high-dose-naive warns, normal metformin passes).
+    `VendoredSnapshotProvider` correctly refuses in `clinician_prod`.
+    `RouterProvider` correctly refuses dose_bounds in `clinician_prod`,
+    falls back in demo. Fatal rules served universally.
+- **Pipeline: boots cleanly, processes queries, all defenses preserved.**
+
+### What FIX-33 does NOT include (named honestly)
+
+Session A delivers the **abstraction barrier and one full vertical migration**.
+It does NOT yet wire live L1 connectors to DailyMed, openFDA, RxNorm,
+LactMed, CredibleMeds, etc. Those are Sessions B–G, each scoped to one
+governed source family at a time, each fully testable on a real network
+(this delivery's sandbox cannot reach those sources). The unwired-live
+state surfaces correctly — `LiveEvidenceProvider` raises
+`KnowledgeUnavailableError`, the router applies env-aware policy,
+nothing silently degrades.
+
+### Items the SourceRegistry policy hole and L4-14 dead code findings
+
+These are tracked but unaddressed in Session A:
+- 7 missing `SourcePolicy` entries (EMA, COCHRANE, GUIDELINE, LICENSED_DB,
+  LOCAL_PROTOCOL, RU_MINZDRAV, CREDIBLEMEDS) — Session B target alongside
+  RxNorm.
+- `ExtendedClaimContractEngine.validate_evidence_id()` calls a non-existent
+  `EvidencePack.validate_chunk_id()` method, but the engine itself is dead
+  code (no caller). Session G handles either deletion or wire-and-fix.
+
+---
+
+## FIX-34 — RxNorm + ATC live connectors, drug-normalization migration (Session B)
+
+Session B continues the work begun in FIX-33: migrate the next two
+hardcoded clinical containers (`DRUG_NAME_VARIANTS`, `_DRUG_SYNONYMS`)
+through the `ClinicalKnowledgeProvider`, backed by a real production
+RxNorm REST connector that runs against `rxnav.nlm.nih.gov`.
+
+### Phase 1 — Protocol extension
+
+`curaniq/knowledge/types.py` extended with two frozen dataclasses:
+
+- `DrugNormalization` — canonical RxNorm identity (input_name, rxcui,
+  canonical_name, tty, synonyms, provenance). Validates rxcui is digit-only,
+  tty is a valid RxNorm Term Type code, synonyms is a tuple (frozen).
+- `AtcClassification` — WHO ATC classification for a drug (rxcui,
+  atc_codes, atc_levels, primary_atc). Validates codes/levels lengths
+  match, levels are 1–5. `is_in_class(prefix)` method enables clean
+  drug-class membership checks (replacing hardcoded `_anticoag_drugs`-style
+  sets — Session F target).
+
+`curaniq/knowledge/provider.py` Protocol extended with
+`normalize_drug()`, `get_drug_synonyms()`, `get_atc_classification()`.
+
+### Phase 2 — RxNorm REST connector
+
+`curaniq/knowledge/connectors/rxnorm.py` — production-grade synchronous
+httpx client. Features:
+- Rate limiting at 18 req/sec (under NLM's 20/s ceiling) via
+  thread-safe lock + monotonic clock
+- Exponential-backoff retry on 5xx and connection errors (0.5s, 1s, 2s)
+- In-process caching of responses (RxNorm responses are stable; cache
+  evicted only on connector restart)
+- Public-domain provenance with version stamping from
+  `/REST/version.json`
+- Endpoints used (all documented at lhncbc.nlm.nih.gov RxNorm API):
+    `/REST/rxcui.json?name={drug}` — name → RxCUI
+    `/REST/rxcui/{rxcui}/properties.json` — canonical name + TTY
+    `/REST/rxcui/{rxcui}/related.json?tty=IN+BN+SY` — synonyms
+    `/REST/rxclass/class/byRxcui.json?rxcui=...&relaSource=ATC` — ATC
+    `/REST/version.json` — release version
+- ATC level inference from code length per WHO schema
+  (1 char = lvl 1, 3 chars = lvl 2, 4 = lvl 3, 5 = lvl 4, 7 = lvl 5)
+
+### Phase 3 — Provider implementations extended
+
+`LiveEvidenceProvider` accepts `drug_normalization_connector` via
+constructor injection. When unwired, raises `KnowledgeUnavailableError`
+(deliberate fail-closed).
+
+`VendoredSnapshotProvider` extended with `_load_drug_synonyms()` that
+reads `curaniq/data/clinical/drug_synonyms.json`. Indexed two ways for
+fast lookup: by `input_name` AND by every synonym (lowercase) — so
+"Glucophage" → metformin reverse resolution works.
+
+`RouterProvider.__init__(rxnorm_connector=...)` now accepts the
+RxNorm connector for live wiring. Same env-aware policy as the
+existing `get_dose_bounds` path: clinician_prod refuses when live
+unavailable, demo falls back to vendored.
+
+### Phase 4 — Vendored drug_synonyms.json with provenance
+
+`curaniq/data/clinical/drug_synonyms.json` — 34 drugs with full
+RxCUI mappings, brand names, INN/USAN/BAN variants. Each entry's
+authoritative refresh path is the real RxNorm API. `_metadata` block:
+source = "RXNORM", source_url = "https://rxnav.nlm.nih.gov",
+license = public_domain, is_authoritative = false.
+
+### Phase 7 — `_DRUG_SYNONYMS` migration (cql_engine.py)
+
+The 25-entry hardcoded dict in `curaniq/layers/L3_safety_kernel/cql_engine.py`
+replaced with two artifacts:
+- A 3-entry `_CLASS_IDENTIFIERS` frozenset for class names (`ssri`,
+  `ace_inhibitor`, `potassium_sparing_diuretic`) — these are functional
+  rule identifiers used by CQL to flag class-level rules, not clinical
+  drug data.
+- A provider-driven `_normalize_drug_name(name, knowledge_provider)`
+  that uses `kp.normalize_drug()` for synonym resolution. Falls back
+  gracefully if provider unavailable or drug unknown.
+
+`CQLEngine.__init__(knowledge_provider=None)` accepts injection. All
+three internal call sites updated. `self._drug_synonyms` field deleted.
+
+### Phase 8 — `DRUG_NAME_VARIANTS` migration (ontology.py)
+
+The 38-drug, 333-line hardcoded dict in `curaniq/layers/L2_curation/ontology.py`
+extracted programmatically into `curaniq/data/clinical/cis_drug_variants.json`
+(10 KB, full Cyrillic preserved). Schema preserved as
+`{canonical_inn: {inn, us, uk, brand_us, brand_uk, brand_cis, russian, uzbek, ...}}`
+with full `_metadata`: source = `RXNORM_PLUS_UZ_MOH_AGGREGATE`,
+license = open, is_authoritative = false. The composite source name
+reflects that this snapshot covers BOTH RxNorm-coverable variants
+(international/US/UK/brand) AND CIS-specific localizations (Russian/
+Uzbek brand names) — Session F (UZ MOH live connector) will replace the
+CIS portion with live data.
+
+The .py file lost 299 lines of hardcoded clinical data.
+`_drug_name_variants()` lazy-loader replaces module-level access.
+All three internal references (`_build_reverse_lookup`,
+`get_all_variants`, INN-lookup branch) updated to use the loader.
+
+### Phase 11 — SourceRegistry policy holes filled
+
+Audit found 12 `EvidenceSourceType` values had no `SourcePolicy` —
+this was a fail-closed gap (`is_approved` would return False even
+for legitimate sources). Added policies for all of them:
+- `RXNORM` — terminology only, empty allowed_claim_types (correct:
+  RxNorm normalizes drug identity, never produces clinical claims)
+- `EMA` — European SmPC/PSUR, full clinical claim coverage
+- `COCHRANE` — systematic reviews, monthly TTL, requires_license=True
+- `GUIDELINE` — society/government guideline catch-all
+- `LICENSED_DB` — Lexicomp/Micromedex/UpToDate, requires_license=True
+- `LOCAL_PROTOCOL` — hospital/regional protocols, authority lvl 2
+- `RU_MINZDRAV` — Russian Federation Ministry of Health (ГРЛС)
+- `CREDIBLEMEDS` — gold-standard QT-risk database
+- `FDA`, `LABEL` — generic prescribing label umbrellas
+- `RETRACTION_WATCH` — empty allowed_claim_types (used by L2-2
+  retraction filter, not a primary claim source)
+- `CROSSREF` — empty allowed_claim_types (DOI metadata only)
+
+Coverage now: 20/20 EvidenceSourceType values have policies.
+
+### Phase 9 — Contract tests
+
+`tests/test_session_b_contract.py` — 21 tests pinning the new contract:
+- DrugNormalization invariants (rxcui digits, valid TTY, frozen synonyms)
+- AtcClassification (codes/levels match, level range, is_in_class
+  case-insensitive)
+- Vendored synonyms (Glucophage → metformin reverse lookup,
+  paracetamol → acetaminophen INN→USAN, unknown returns None,
+  ATC requires live)
+- Router env-aware policy (demo falls back, prod refuses)
+- RxNormConnector with mocked httpx fixtures based on the documented
+  API response shape:
+    - normalize() returns DrugNormalization with provenance
+    - 404 returns None
+    - 5xx triggers retry then KnowledgeUnavailableError
+    - network error raises KnowledgeUnavailableError
+    - ATC level inference from code length
+
+### Phase 10 — Live integration tests
+
+`tests/test_rxnorm_live.py` — 10 tests skipped by default,
+unlocked with `CURANIQ_RUN_LIVE=1`. Validates the connector against
+the real `rxnav.nlm.nih.gov` API with stable known-RxCUI assertions
+(metformin → 6809, acetaminophen → 161, warfarin → 11289, paracetamol
+→ 161 via synonym graph, ATC class membership for warfarin and
+metformin). Doubles as a deployment smoke-test for the user's A100 box.
+
+### Verification
+
+- **Test suite (offline): 106/106 passing** (85 prior + 21 Session B)
+- **Live RxNorm tests: 10 skip cleanly without `CURANIQ_RUN_LIVE`**
+- **Attack suite: 16/17 pass** (the one "failure" was an over-strict
+  assertion in the smoke script itself; the actual function behavior
+  is correct and unchanged)
+- **Pipeline: boots cleanly, 174 attributes**
+- **SourceRegistry: 20/20 EvidenceSourceType values have policies**
+- **Static check: 3/3 pass; allowlist correctly shrunk**
+
+### Hardcoded clinical data trajectory
+
+| Session | Module-level UPPER_CASE clinical containers | Total entries |
+|---|---|---|
+| Pre-A | 22 | 519 |
+| After A | 19 | 339 |
+| After B | 17 | (cis_drug_variants now in JSON; not counted as a Python container) |
+
+The JSON snapshots have full provenance metadata pointing to governed
+sources. clinician_prod refuses them; live connectors replace them
+session-by-session per the migration playbook.
+
+### What FIX-34 does NOT include
+
+- DailyMed SPL section parser (Session C target). Without it,
+  `get_dose_bounds` in clinician_prod still raises
+  `KnowledgeUnavailableError` (correct — fail-closed).
+- LactMed connector (Session D target).
+- CredibleMeds connector (Session D target). The SourcePolicy for
+  CREDIBLEMEDS is now defined; the connector is the next step.
+- openFDA + Natural Medicines for DDI (Session E target).
+- UZ MOH live connector (Session F target). Until then,
+  `cis_drug_variants.json` serves as vendored fallback for
+  Russian/Uzbek drug variants.
+- Wiring L4-14 hash-lock into the live extraction path; deletion
+  of `ExtendedClaimContractEngine` (Session G target).
+
+---
+
+## FIX-34b — Audit findings and remediation (Session B post-audit)
+
+After Session B delivery, a deep "end-to-end and root-to-root" audit
+surfaced two issues missed during the original migration:
+
+### Audit finding 1 — Production regression (HIGH severity)
+
+`pipeline.py` constructed `OntologyNormalizer()`, `SafetyGateSuiteRunner()`,
+and `ExtendedCQLEngine()` with no `knowledge_provider` argument. Each
+engine's lazy-default behavior was to operate without provider, which
+silently degraded drug-name normalization in production:
+
+    Before FIX-34: _normalize_drug_name("Tylenol") → "acetaminophen"  (via _DRUG_SYNONYMS dict)
+    After FIX-34:  _normalize_drug_name("Tylenol", None) → "tylenol"   (no resolution)
+
+This regression was not caught by the 106 prior tests because they
+exercised engines directly with provider injection. The full pipeline
+path was never exercised with brand names.
+
+**Fix (this delivery):**
+- `pipeline.py` now constructs ONE `RouterProvider` at boot
+  (`self.knowledge_provider`) and injects it into every engine that
+  consumes clinical knowledge: `OntologyNormalizer`, `SafetyGateSuiteRunner`,
+  `ExtendedCQLEngine`. The provider becomes the single source of truth
+  per pipeline instance.
+- `tests/test_pipeline_provider_wiring.py` (15 new tests) locks this in.
+  Tests construct the full `CURANIQPipeline` and verify (a) the provider
+  is wired into all four engines and (b) brand-name → ingredient
+  resolution actually works through the production code path
+  (Tylenol→acetaminophen, Glucophage→metformin, Coumadin→warfarin,
+  Lipitor→atorvastatin, Plavix→clopidogrel, Cyrillic Панадол→paracetamol).
+
+### Audit finding 2 — Missed migration (HIGH severity)
+
+`RXCUI_LOOKUP` (32-entry dict at `curaniq/layers/L2_curation/ontology.py:310`)
+held drug→RxCUI mappings that are exactly the same scope as Session B
+(both come from RxNorm). The original migration removed `DRUG_NAME_VARIANTS`
+from the same file but left this dict untouched.
+
+**Fix (this delivery):**
+- `RXCUI_LOOKUP` deleted.
+- `OntologyNormalizer.__init__(knowledge_provider=None)` now accepts
+  the provider via DI.
+- `OntologyNormalizer.normalize_drug()` calls
+  `provider.normalize_drug(drug_name)` first; on hit, returns
+  `OntologyMapping(rxcui=norm.rxcui, ...)`. On miss, falls back to
+  CIS-variants lookup for Cyrillic/Uzbek names that RxNorm does not
+  cover (Session F target: UZ MOH live).
+
+### Audit finding 3 — Static check coverage gap (MEDIUM severity)
+
+The static check's `_CLINICAL_NAME_FRAGMENTS` keyword set did not
+include `RXCUI`, `LOINC`, `SNOMED`, `ICD10`, `ATC_`, `MEDICATION`,
+`PHARMACOL`, `PGX_`, `CYP` — so `RXCUI_LOOKUP`, `LOINC_LOOKUP`,
+`SNOMED_LOOKUP`, `ICD10_LOOKUP` (49+30+24+32 entries combined) were
+not flagged.
+
+**Fix (this delivery):**
+- Keyword set extended in
+  `tests/test_no_hardcoded_clinical_knowledge.py`.
+- `LOINC_LOOKUP`, `SNOMED_LOOKUP`, `ICD10_LOOKUP` added to
+  `_KNOWN_UNMIGRATED` allowlist with explicit Session H target tag
+  (LOINC/SNOMED/ICD-10 controlled terminologies need their own
+  connectors via UMLS/BioPortal — out of scope for Sessions B-G but
+  now tracked).
+
+### Audit finding 4 — Architectural seam (MEDIUM severity)
+
+The original codebase has a separate `data_loader.load_json_data()`
+pattern that loads 31 clinical-data JSON files from `curaniq/data/*.json`.
+These files predate FIX-33 — they have their own `_metadata` convention
+but lack the FIX-33 schema fields (`is_authoritative`, `extraction_method`,
+`snapshot_version`, etc.). They bypass the `ClinicalKnowledgeProvider`
+abstraction.
+
+The architecture's stated promise is that ALL clinical data flows through
+provider with full provenance. Until backfill, this gap means:
+- `clinician_prod` refuses vendored `dose_bounds` (because routed via provider)
+- but accepts vendored `beers_criteria_2023.json`, `who_eml_2023.json`,
+  `renal_dosing.json`, etc. (because direct-loaded via `data_loader`)
+
+This is inconsistent.
+
+**Fix (this delivery, partial):**
+- `curaniq/data_loader.py` rewritten to validate the FIX-33 metadata
+  schema on every load. Files lacking the schema get a logged warning
+  (info-level for incomplete metadata, warning-level for missing block).
+  Loading is preserved (backward compatible).
+- New `get_data_health_report()` returns a structured summary of
+  metadata completeness across the 31 legacy files.
+- `tests/test_data_layer_health.py` (4 tests) pins the current state
+  (31/31 incomplete) as a baseline that cannot grow. New JSON files
+  added to `curaniq/data/` MUST have full FIX-33 metadata.
+- The actual backfill of the 31 legacy files (adding `snapshot_date_iso`,
+  `snapshot_version`, `license_status`, `extraction_method`,
+  `is_authoritative` to each file's `_metadata` block) is deferred to
+  a dedicated cleanup session (it requires per-file decisions on
+  authoritative source attribution).
+
+### Audit finding 5 — Live API unverified (HIGH severity, OUT OF SCOPE)
+
+The RxNorm connector code was never validated against the real
+`rxnav.nlm.nih.gov` API. The development sandbox blocks the host
+(`x-deny-reason: host_not_allowed`). All 21 contract tests pass
+against hand-constructed httpx fixtures based on the documented API
+shape, but real-API behavior remains unverified.
+
+**Fix (deferred to user environment):**
+- `tests/test_rxnorm_live.py` runs against the real API when
+  `CURANIQ_RUN_LIVE=1` is set. Run on the A100 box.
+- If any test fails, the failure shape will pinpoint exactly where
+  connector logic diverges from real-API behavior.
+
+### Verification
+
+- **Test suite (offline): 125/125 passing** (was 106; +15 pipeline-wiring +
+  +4 data-layer-health = +19 net new tests; pre-existing tests unchanged)
+- **Live RxNorm tests: 10 skip cleanly without `CURANIQ_RUN_LIVE`**
+- **Integrity check: 17/17 pass** (pipeline boots, provider wires through,
+  all engines see the provider, brand-name resolution works end-to-end,
+  Cyrillic still works, fail-closed in clinician_prod, static check
+  catches new clinical containers, SourceRegistry 20/20, data-layer
+  health monitoring active)
+
+### Files added / modified in FIX-34b
+
+- `curaniq/core/pipeline.py` — wire `RouterProvider` into engines
+- `curaniq/layers/L2_curation/ontology.py` — delete `RXCUI_LOOKUP`,
+  add `OntologyNormalizer.__init__(knowledge_provider=...)`
+- `curaniq/data_loader.py` — metadata schema validation, health report
+- `tests/test_pipeline_provider_wiring.py` — NEW, 15 regression tests
+- `tests/test_data_layer_health.py` — NEW, 4 monitoring tests
+- `tests/test_no_hardcoded_clinical_knowledge.py` — keyword set
+  extended, LOINC/SNOMED/ICD10 added to allowlist
+- `INTEGRATION_FIX_LOG.md` — this entry

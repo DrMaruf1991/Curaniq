@@ -1,0 +1,199 @@
+{
+  "$schema": "../schemas/dose_bounds.schema.json",
+  "_metadata": {
+    "title": "Dose Plausibility Bounds — Vendored Snapshot",
+    "purpose": "Outer envelope of plausible single doses per drug, derived from FDA-approved drug labels (Dosage and Administration section). Used by L5-12 to detect order-of-magnitude dose errors. NOT clinical recommendations — only an unsafe-outlier filter.",
+    "scope": "DEMO and RESEARCH environments only. clinician_prod must use LiveEvidenceProvider against DailyMed/openFDA at runtime; this snapshot is REFUSED in clinician_prod by VendoredSnapshotProvider.",
+    "snapshot_origin": "Manual curation from DailyMed SPL Dosage and Administration sections, cross-checked against BNF (UK) and AMA Drug Reference. Each entry's authoritative refresh path is the live DailyMed API per drug NDC.",
+    "snapshot_date_iso": "2026-04-25T00:00:00Z",
+    "snapshot_version": "vendored-2026.04.25.1",
+    "license_status": "public_domain",
+    "extraction_method": "manual_curation",
+    "refresh_command": "python -m curaniq.knowledge.refresh dose_bounds --source dailymed",
+    "is_authoritative": false,
+    "_warning": "This file is NOT live evidence. It is a vendored snapshot used only when LiveEvidenceProvider is unreachable AND the runtime is demo/research. clinician_prod MUST NOT consume this file."
+  },
+  "bounds": [
+    {
+      "drug": "paracetamol",
+      "min_single_dose_mg": 250.0,
+      "max_single_dose_mg": 1000.0,
+      "route_context": "oral adult",
+      "tolerance_factor": 5.0,
+      "source_label_url": "https://dailymed.nlm.nih.gov/dailymed/search.cfm?query=acetaminophen",
+      "label_section": "Dosage and Administration"
+    },
+    {
+      "drug": "acetaminophen",
+      "min_single_dose_mg": 250.0,
+      "max_single_dose_mg": 1000.0,
+      "route_context": "oral adult",
+      "tolerance_factor": 5.0,
+      "source_label_url": "https://dailymed.nlm.nih.gov/dailymed/search.cfm?query=acetaminophen",
+      "label_section": "Dosage and Administration"
+    },
+    {
+      "drug": "ibuprofen",
+      "min_single_dose_mg": 100.0,
+      "max_single_dose_mg": 800.0,
+      "route_context": "oral adult",
+      "tolerance_factor": 5.0,
+      "source_label_url": "https://dailymed.nlm.nih.gov/dailymed/search.cfm?query=ibuprofen",
+      "label_section": "Dosage and Administration"
+    },
+    {
+      "drug": "amoxicillin",
+      "min_single_dose_mg": 125.0,
+      "max_single_dose_mg": 1000.0,
+      "route_context": "oral adult",
+      "tolerance_factor": 5.0,
+      "source_label_url": "https://dailymed.nlm.nih.gov/dailymed/search.cfm?query=amoxicillin",
+      "label_section": "Dosage and Administration"
+    },
+    {
+      "drug": "metformin",
+      "min_single_dose_mg": 250.0,
+      "max_single_dose_mg": 1000.0,
+      "route_context": "oral adult immediate-release",
+      "tolerance_factor": 5.0,
+      "source_label_url": "https://dailymed.nlm.nih.gov/dailymed/search.cfm?query=metformin",
+      "label_section": "Dosage and Administration"
+    },
+    {
+      "drug": "atorvastatin",
+      "min_single_dose_mg": 5.0,
+      "max_single_dose_mg": 80.0,
+      "route_context": "oral adult",
+      "tolerance_factor": 5.0,
+      "source_label_url": "https://dailymed.nlm.nih.gov/dailymed/search.cfm?query=atorvastatin",
+      "label_section": "Dosage and Administration"
+    },
+    {
+      "drug": "simvastatin",
+      "min_single_dose_mg": 5.0,
+      "max_single_dose_mg": 80.0,
+      "route_context": "oral adult",
+      "tolerance_factor": 5.0,
+      "source_label_url": "https://dailymed.nlm.nih.gov/dailymed/search.cfm?query=simvastatin",
+      "label_section": "Dosage and Administration"
+    },
+    {
+      "drug": "aspirin",
+      "min_single_dose_mg": 75.0,
+      "max_single_dose_mg": 1000.0,
+      "route_context": "oral adult",
+      "tolerance_factor": 5.0,
+      "source_label_url": "https://dailymed.nlm.nih.gov/dailymed/search.cfm?query=aspirin",
+      "label_section": "Dosage and Administration"
+    },
+    {
+      "drug": "lisinopril",
+      "min_single_dose_mg": 2.5,
+      "max_single_dose_mg": 40.0,
+      "route_context": "oral adult",
+      "tolerance_factor": 5.0,
+      "source_label_url": "https://dailymed.nlm.nih.gov/dailymed/search.cfm?query=lisinopril",
+      "label_section": "Dosage and Administration"
+    },
+    {
+      "drug": "amlodipine",
+      "min_single_dose_mg": 2.5,
+      "max_single_dose_mg": 10.0,
+      "route_context": "oral adult",
+      "tolerance_factor": 5.0,
+      "source_label_url": "https://dailymed.nlm.nih.gov/dailymed/search.cfm?query=amlodipine",
+      "label_section": "Dosage and Administration"
+    },
+    {
+      "drug": "omeprazole",
+      "min_single_dose_mg": 10.0,
+      "max_single_dose_mg": 40.0,
+      "route_context": "oral adult",
+      "tolerance_factor": 5.0,
+      "source_label_url": "https://dailymed.nlm.nih.gov/dailymed/search.cfm?query=omeprazole",
+      "label_section": "Dosage and Administration"
+    },
+    {
+      "drug": "warfarin",
+      "min_single_dose_mg": 0.5,
+      "max_single_dose_mg": 20.0,
+      "route_context": "oral adult — INR-titrated",
+      "tolerance_factor": 5.0,
+      "source_label_url": "https://dailymed.nlm.nih.gov/dailymed/search.cfm?query=warfarin",
+      "label_section": "Dosage and Administration"
+    },
+    {
+      "drug": "digoxin",
+      "min_single_dose_mg": 0.0625,
+      "max_single_dose_mg": 0.25,
+      "route_context": "oral adult — narrow therapeutic index",
+      "tolerance_factor": 5.0,
+      "source_label_url": "https://dailymed.nlm.nih.gov/dailymed/search.cfm?query=digoxin",
+      "label_section": "Dosage and Administration"
+    },
+    {
+      "drug": "levothyroxine",
+      "min_single_dose_mg": 0.0125,
+      "max_single_dose_mg": 0.3,
+      "route_context": "oral adult (12.5 mcg to 300 mcg)",
+      "tolerance_factor": 5.0,
+      "source_label_url": "https://dailymed.nlm.nih.gov/dailymed/search.cfm?query=levothyroxine",
+      "label_section": "Dosage and Administration"
+    },
+    {
+      "drug": "prednisolone",
+      "min_single_dose_mg": 1.0,
+      "max_single_dose_mg": 60.0,
+      "route_context": "oral adult — varies by indication",
+      "tolerance_factor": 5.0,
+      "source_label_url": "https://dailymed.nlm.nih.gov/dailymed/search.cfm?query=prednisolone",
+      "label_section": "Dosage and Administration"
+    },
+    {
+      "drug": "morphine",
+      "min_single_dose_mg": 2.5,
+      "max_single_dose_mg": 30.0,
+      "route_context": "oral adult — opioid-naive baseline",
+      "tolerance_factor": 5.0,
+      "source_label_url": "https://dailymed.nlm.nih.gov/dailymed/search.cfm?query=morphine",
+      "label_section": "Dosage and Administration"
+    },
+    {
+      "drug": "methotrexate",
+      "min_single_dose_mg": 2.5,
+      "max_single_dose_mg": 30.0,
+      "route_context": "oral WEEKLY adult — non-oncology",
+      "tolerance_factor": 5.0,
+      "source_label_url": "https://dailymed.nlm.nih.gov/dailymed/search.cfm?query=methotrexate",
+      "label_section": "Dosage and Administration",
+      "_warning": "Range applies to WEEKLY non-oncology dosing. Daily dosing of these amounts is fatal — see fatal_dose_errors.json."
+    },
+    {
+      "drug": "lithium",
+      "min_single_dose_mg": 100.0,
+      "max_single_dose_mg": 800.0,
+      "route_context": "oral adult per dose",
+      "tolerance_factor": 5.0,
+      "source_label_url": "https://dailymed.nlm.nih.gov/dailymed/search.cfm?query=lithium",
+      "label_section": "Dosage and Administration"
+    },
+    {
+      "drug": "gentamicin",
+      "min_single_dose_mg": 60.0,
+      "max_single_dose_mg": 640.0,
+      "route_context": "IV daily 5-7 mg/kg/day adult",
+      "tolerance_factor": 5.0,
+      "source_label_url": "https://dailymed.nlm.nih.gov/dailymed/search.cfm?query=gentamicin",
+      "label_section": "Dosage and Administration"
+    },
+    {
+      "drug": "vancomycin",
+      "min_single_dose_mg": 500.0,
+      "max_single_dose_mg": 3000.0,
+      "route_context": "IV per dose adult",
+      "tolerance_factor": 5.0,
+      "source_label_url": "https://dailymed.nlm.nih.gov/dailymed/search.cfm?query=vancomycin",
+      "label_section": "Dosage and Administration"
+    }
+  ]
+}

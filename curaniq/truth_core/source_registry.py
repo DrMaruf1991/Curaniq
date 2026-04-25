@@ -72,6 +72,91 @@ DEFAULT_SOURCE_POLICIES: dict[EvidenceSourceType, SourcePolicy] = {
         {ClaimType.DIAGNOSTIC, ClaimType.EFFICACY, ClaimType.MONITORING, ClaimType.DOSING, ClaimType.CONTRAINDICATION},
         False, "Uzbekistan Ministry/local protocols.",
     ),
+    # ─── FIX-34 (Session B) — added missing source policies ───
+    EvidenceSourceType.RXNORM: SourcePolicy(
+        EvidenceSourceType.RXNORM, 1, Jurisdiction.US, 24 * 7, True,
+        # RxNorm is a controlled terminology, not a clinical-claim source.
+        # It does not produce dosing/contraindication facts; it only
+        # normalizes drug identity. Hence empty allowed_claim_types —
+        # claims sourced exclusively from RxNorm are not allowed.
+        set(),
+        False, "RxNorm controlled drug terminology (NLM). Identity-resolution only — never the sole source for clinical claims.",
+        license_status="public_domain",
+    ),
+    EvidenceSourceType.EMA: SourcePolicy(
+        EvidenceSourceType.EMA, 1, Jurisdiction.UK, 24 * 7, True,  # treat EMA as Europe-aligned
+        {ClaimType.DOSING, ClaimType.CONTRAINDICATION, ClaimType.DRUG_INTERACTION,
+         ClaimType.SAFETY_SIGNAL, ClaimType.SAFETY_WARNING, ClaimType.MONITORING,
+         ClaimType.EFFICACY},
+        False, "European Medicines Agency — SmPC (Summary of Product Characteristics) and PSUR.",
+        license_status="open",
+    ),
+    EvidenceSourceType.COCHRANE: SourcePolicy(
+        EvidenceSourceType.COCHRANE, 1, Jurisdiction.INT, 24 * 7 * 4, True,  # monthly TTL
+        {ClaimType.EFFICACY, ClaimType.SAFETY_SIGNAL, ClaimType.DIAGNOSTIC,
+         ClaimType.PROGNOSIS, ClaimType.MONITORING},
+        True, "Cochrane Library systematic reviews and meta-analyses.",
+        license_status="licensed",
+    ),
+    EvidenceSourceType.GUIDELINE: SourcePolicy(
+        EvidenceSourceType.GUIDELINE, 1, Jurisdiction.INT, 24 * 7 * 4, True,
+        {ClaimType.DIAGNOSTIC, ClaimType.EFFICACY, ClaimType.MONITORING,
+         ClaimType.DOSING, ClaimType.CONTRAINDICATION},
+        False, "Society/government clinical practice guidelines (catch-all for AHA/ACC/ESC/ASCO/etc).",
+    ),
+    EvidenceSourceType.LICENSED_DB: SourcePolicy(
+        EvidenceSourceType.LICENSED_DB, 1, Jurisdiction.US, 24, True,
+        {ClaimType.DOSING, ClaimType.CONTRAINDICATION, ClaimType.DRUG_INTERACTION,
+         ClaimType.SAFETY_SIGNAL, ClaimType.SAFETY_WARNING, ClaimType.MONITORING},
+        True, "Commercial licensed clinical databases (Lexicomp, Micromedex, UpToDate).",
+        license_status="licensed",
+    ),
+    EvidenceSourceType.LOCAL_PROTOCOL: SourcePolicy(
+        EvidenceSourceType.LOCAL_PROTOCOL, 2, Jurisdiction.UZ, 24 * 7, True,
+        {ClaimType.DIAGNOSTIC, ClaimType.MONITORING, ClaimType.DOSING},
+        False, "Hospital/regional protocol artifacts; treated as authority level 2 (deferring to national guidance).",
+    ),
+    EvidenceSourceType.RU_MINZDRAV: SourcePolicy(
+        EvidenceSourceType.RU_MINZDRAV, 1, Jurisdiction.UZ, 24 * 7, True,  # CIS-aligned
+        {ClaimType.DIAGNOSTIC, ClaimType.EFFICACY, ClaimType.MONITORING,
+         ClaimType.DOSING, ClaimType.CONTRAINDICATION},
+        False, "Russian Federation Ministry of Health — ГРЛС drug register and ministerial standards.",
+    ),
+    EvidenceSourceType.CREDIBLEMEDS: SourcePolicy(
+        EvidenceSourceType.CREDIBLEMEDS, 1, Jurisdiction.INT, 24 * 7, True,
+        # CredibleMeds is THE authority for QT-risk classification
+        {ClaimType.SAFETY_SIGNAL, ClaimType.SAFETY_WARNING, ClaimType.CONTRAINDICATION,
+         ClaimType.MONITORING},
+        False, "AZCERT/CredibleMeds QT-prolongation risk database — gold standard for TdP risk stratification.",
+        license_status="open",
+    ),
+    EvidenceSourceType.FDA: SourcePolicy(
+        EvidenceSourceType.FDA, 1, Jurisdiction.US, 24, True,
+        {ClaimType.DOSING, ClaimType.CONTRAINDICATION, ClaimType.DRUG_INTERACTION,
+         ClaimType.SAFETY_SIGNAL, ClaimType.SAFETY_WARNING, ClaimType.MONITORING},
+        False, "Generic FDA umbrella source (use DAILYMED or OPENFDA for specific endpoints).",
+    ),
+    EvidenceSourceType.LABEL: SourcePolicy(
+        EvidenceSourceType.LABEL, 1, Jurisdiction.US, 24, True,
+        {ClaimType.DOSING, ClaimType.CONTRAINDICATION, ClaimType.DRUG_INTERACTION,
+         ClaimType.SAFETY_SIGNAL, ClaimType.SAFETY_WARNING, ClaimType.MONITORING},
+        False, "Generic prescribing label (USPI/SmPC). Prefer DAILYMED or EMA for specific provenance.",
+    ),
+    EvidenceSourceType.RETRACTION_WATCH: SourcePolicy(
+        EvidenceSourceType.RETRACTION_WATCH, 1, Jurisdiction.INT, 24, True,
+        # Retraction Watch is an L2 INPUT (not a claim source) — used to
+        # invalidate other sources, not to support claims.
+        set(),
+        False, "Retraction database — used by L2-2 freshness/retraction filter; never a primary claim source.",
+        license_status="open",
+    ),
+    EvidenceSourceType.CROSSREF: SourcePolicy(
+        EvidenceSourceType.CROSSREF, 1, Jurisdiction.INT, 24 * 7, False,
+        # Crossref is bibliographic metadata, not a claim source
+        set(),
+        False, "Crossref DOI metadata — used for citation resolution, not for clinical claims.",
+        license_status="open",
+    ),
 }
 
 

@@ -18,7 +18,7 @@ Gates implemented:
 from __future__ import annotations
 import re
 from datetime import datetime, timezone
-from typing import Optional
+from typing import Optional, TYPE_CHECKING
 
 from curaniq.models.schemas import (
     AtomicClaim,
@@ -33,6 +33,9 @@ from curaniq.models.schemas import (
     SafetyGateSuite,
     UserRole,
 )
+
+if TYPE_CHECKING:
+    from curaniq.knowledge import ClinicalKnowledgeProvider
 
 
 # ─────────────────────────────────────────────────────────────────────────────
@@ -528,108 +531,90 @@ def gate_black_box_rems(
 
 # ─────────────────────────────────────────────────────────────────────────────
 # L5-12: DOSE PLAUSIBILITY CHECKER
+#
+# Architecture: detects historical fatal medication-error patterns
+# (methotrexate-daily, vincristine-IT, heparin-mg, insulin-U, colchicine
+# decimal-place, morphine opioid-naive overdose).
+#
+# Source of truth: ISMP Sentinel Event list, loaded by the clinical
+# knowledge provider. NEVER hardcoded in this file.
+#
+# The rules ARE the safety logic — the regex patterns encode
+# known-historical-fatal-error patterns. They are loaded uniformly
+# across demo, research, and clinician_prod (rules are universal,
+# unlike clinical data which is refused in clinician_prod when
+# vendored).
+#
+# See: curaniq/data/rules/fatal_dose_errors.json
+#      curaniq/knowledge/types.py::FatalErrorRule
 # ─────────────────────────────────────────────────────────────────────────────
-
-# Historical fatal medication errors database
-# Source: ISMP (Institute for Safe Medication Practices) Medication Error Reports
-FATAL_DOSE_ERRORS: list[dict] = [
-    {
-        "drug": "methotrexate",
-        "error": "daily vs weekly",
-        "safe_pattern": re.compile(r'\bmethotrexate\b.{0,60}\b(weekly|once\s+a\s+week|per\s+week|week)\b', re.I),
-        "danger_pattern": re.compile(r'\bmethotrexate\b.{0,60}\b(daily|every\s+day|once\s+daily|od)\b', re.I),
-        "message": "METHOTREXATE FATAL ERROR RISK: Methotrexate for non-oncology indications is WEEKLY, not daily. Daily dosing causes fatal bone marrow suppression. ISMP Sentinel Event.",
-    },
-    {
-        "drug": "colchicine",
-        "error": "6mg vs 0.6mg",
-        "danger_pattern": re.compile(r'\bcolchicine\b.{0,60}\b(\d+\.?\d*\s*mg)\b', re.I),
-        "dose_limit_mg": 1.8,   # Max safe acute dose
-        "message": "COLCHICINE DOSE CHECK: Doses >1.8mg in acute gout or >0.6mg BID in prophylaxis are associated with toxicity. Verify intended dose carefully.",
-    },
-    {
-        "drug": "vincristine",
-        "error": "intrathecal vs intravenous",
-        "danger_pattern": re.compile(r'\bvincristine\b.{0,60}\b(intrathecal|IT\s+injection|IT\s+admin|spinal)\b', re.I),
-        "message": "VINCRISTINE FATAL ROUTE ERROR: Intrathecal vincristine is ALWAYS FATAL. Vincristine is administered IV ONLY. This response has been blocked.",
-        "severity": "EMERGENCY",
-    },
-    {
-        "drug": "heparin",
-        "error": "units vs mg confusion",
-        "danger_pattern": re.compile(r'\bheparin\b.{0,60}\b(\d{4,}\s*mg|\d+\s*mg)\b(?!.*units)', re.I),
-        "message": "HEPARIN UNIT CONFUSION: Heparin is dosed in UNITS, not mg. 1000 units ≠ 1000mg. Verify unit specification. 10x and 100x overdoses from unit/mg confusion are ISMP Sentinel Events.",
-    },
-    {
-        "drug": "insulin",
-        "error": "U misread as 0",
-        "danger_pattern": re.compile(r'\binsulin\b.{0,60}\b\d+\s*U\b', re.I),
-        "message": "INSULIN UNIT NOTATION: Always write 'units' not 'U' to prevent misreading (e.g., '10U' misread as '100'). ISMP High-Alert Medication.",
-    },
-    {
-        "drug": "morphine",
-        "error": "route and dose confusion",
-        "danger_pattern": re.compile(r'\bmorphine\b.{0,60}\b(\d{2,}\s*mg|\d+\s*mg.{0,20}(oral|PO))\b', re.I),
-        "dose_limit_opioid_naive_mg": 15,
-        "message": "MORPHINE DOSE ALERT: Doses >15mg in opioid-naive patients or incorrect route specification carry high overdose risk. Verify opioid tolerance status.",
-    },
-]
 
 
 def gate_dose_plausibility(
     claims: list[AtomicClaim],
+    knowledge_provider: "ClinicalKnowledgeProvider | None" = None,
 ) -> SafetyGateResult:
     """
     L5-12: Catches order-of-magnitude dosing errors that kill patients.
-    Checks against ISMP Sentinel Event database of historical fatal errors.
+
+    Evaluates each atomic claim's text against ISMP-derived fatal-error
+    rules (methotrexate-daily, vincristine-IT, heparin-mg, etc.) loaded
+    from the clinical knowledge provider.
+
+    Args:
+        claims: Atomic claims to scan.
+        knowledge_provider: Source of fatal-error rules. If None, a
+            default `RouterProvider` is constructed. Test code SHOULD
+            inject a vendored provider directly.
+
+    Returns:
+        SafetyGateResult with severity:
+          BLOCK    if any rule with severity 'emergency' or 'block' fires
+          WARNING  if only severity 'warn' rules fire
+          INFO     if no rules fire
     """
-    violations: list[str] = []
-    emergency_blocks: list[str] = []
+    # Lazy-import to avoid circular dependency at module load
+    from curaniq.knowledge import RouterProvider
+
+    if knowledge_provider is None:
+        knowledge_provider = RouterProvider()
+
+    block_messages: list[str] = []
+    warn_messages: list[str] = []
+    emergency_messages: list[str] = []
 
     for claim in claims:
         if claim.is_blocked:
             continue
         text = claim.claim_text
 
-        for error_spec in FATAL_DOSE_ERRORS:
-            drug = error_spec["drug"]
-            if drug not in text.lower():
+        for rule in knowledge_provider.iter_fatal_error_rules():
+            violated, msg = rule.evaluate(text)
+            if not violated:
                 continue
+            if rule.severity == "emergency":
+                emergency_messages.append(msg or "")
+            elif rule.severity == "block":
+                block_messages.append(msg or "")
+            else:  # warn
+                warn_messages.append(msg or "")
 
-            danger_match = error_spec.get("danger_pattern")
-            if danger_match and danger_match.search(text):
-                sev = error_spec.get("severity", "")
-                msg = error_spec["message"]
-                if sev == "EMERGENCY":
-                    emergency_blocks.append(msg)
-                else:
-                    violations.append(msg)
-
-            # Check safe pattern requirement
-            safe_match = error_spec.get("safe_pattern")
-            if safe_match and not safe_match.search(text) and drug in text.lower():
-                if "weekly" in error_spec.get("error", ""):
-                    violations.append(
-                        f"WARNING: {drug.capitalize()} dosing frequency not specified as 'weekly' — "
-                        "high-risk omission for methotrexate."
-                    )
-
-    if emergency_blocks:
+    if emergency_messages or block_messages:
         return SafetyGateResult(
             gate_id="L5-12",
             gate_name="Dose Plausibility Checker",
             passed=False,
-            message=" | ".join(emergency_blocks),
+            message=" | ".join(emergency_messages + block_messages),
             severity="BLOCK",
             flags_raised=[SafetyFlag.DOSE_IMPLAUSIBLE],
         )
 
-    if violations:
+    if warn_messages:
         return SafetyGateResult(
             gate_id="L5-12",
             gate_name="Dose Plausibility Checker",
             passed=True,
-            message=" | ".join(violations[:2]),
+            message=" | ".join(warn_messages[:2]),
             severity="WARNING",
             flags_raised=[SafetyFlag.DOSE_IMPLAUSIBLE],
         )
@@ -787,6 +772,19 @@ class SafetyGateSuiteRunner:
     Any BLOCK gate causes hard_block=True and prevents output.
     """
 
+    def __init__(
+        self,
+        knowledge_provider: "ClinicalKnowledgeProvider | None" = None,
+    ) -> None:
+        """
+        Args:
+            knowledge_provider: Source of clinical knowledge for gates that
+                consume it (currently L5-12). If None, a default
+                `RouterProvider` is constructed at runtime — environment-aware,
+                fail-closed in clinician_prod.
+        """
+        self._knowledge_provider = knowledge_provider
+
     def run_all(
         self,
         query: ClinicalQuery,
@@ -825,7 +823,7 @@ class SafetyGateSuiteRunner:
         all_gates.append(gate_completeness(claim_contract, evidence_pack))
 
         # Gate 6: L5-12 Dose Plausibility (before language check)
-        all_gates.append(gate_dose_plausibility(claims))
+        all_gates.append(gate_dose_plausibility(claims, self._knowledge_provider))
 
         # Gate 7: L5-2 Safety Language
         all_gates.append(gate_safety_language(claims))

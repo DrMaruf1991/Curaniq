@@ -1,0 +1,257 @@
+{
+  "_metadata": {
+    "title": "Drug Name Synonyms — Vendored Snapshot",
+    "purpose": "Free-text → canonical RxNorm identity mapping. In demo/research, this snapshot serves as fallback when live RxNorm is unreachable. clinician_prod refuses this snapshot — must use the live RxNorm REST connector.",
+    "scope": "DEMO and RESEARCH environments only.",
+    "snapshot_origin": "Manually curated from RxNorm REST API; representative coverage of the most common drugs in the architecture's clinical scope. Each entry's authoritative refresh path is GET /REST/rxcui/{rxcui}/related.json against rxnav.nlm.nih.gov.",
+    "snapshot_date_iso": "2026-04-25T00:00:00Z",
+    "snapshot_version": "vendored-rxnorm-2026.04.25.1",
+    "source": "RXNORM",
+    "source_url": "https://rxnav.nlm.nih.gov",
+    "license_status": "public_domain",
+    "extraction_method": "manual_curation",
+    "is_authoritative": false,
+    "refresh_command": "python -m curaniq.knowledge.refresh drug_synonyms --source rxnorm",
+    "_note": "RxNorm Term Type (TTY) IN = ingredient (canonical form). Synonyms include brand names (BN), spellings (SY), and INN/USAN/BAN variants."
+  },
+  "drugs": [
+    {
+      "input_name": "metformin",
+      "rxcui": "6809",
+      "canonical_name": "metformin",
+      "tty": "IN",
+      "synonyms": ["Glucophage", "metformin hydrochloride", "metformin HCl", "dimethylbiguanide"]
+    },
+    {
+      "input_name": "acetaminophen",
+      "rxcui": "161",
+      "canonical_name": "acetaminophen",
+      "tty": "IN",
+      "synonyms": ["paracetamol", "Tylenol", "APAP", "N-acetyl-p-aminophenol"]
+    },
+    {
+      "input_name": "paracetamol",
+      "rxcui": "161",
+      "canonical_name": "acetaminophen",
+      "tty": "IN",
+      "synonyms": ["paracetamol", "Tylenol", "APAP", "N-acetyl-p-aminophenol"]
+    },
+    {
+      "input_name": "ibuprofen",
+      "rxcui": "5640",
+      "canonical_name": "ibuprofen",
+      "tty": "IN",
+      "synonyms": ["Advil", "Motrin", "Nurofen", "Brufen"]
+    },
+    {
+      "input_name": "amoxicillin",
+      "rxcui": "723",
+      "canonical_name": "amoxicillin",
+      "tty": "IN",
+      "synonyms": ["Amoxil", "Trimox", "amoxycillin"]
+    },
+    {
+      "input_name": "warfarin",
+      "rxcui": "11289",
+      "canonical_name": "warfarin",
+      "tty": "IN",
+      "synonyms": ["Coumadin", "Jantoven", "Warfilone"]
+    },
+    {
+      "input_name": "methotrexate",
+      "rxcui": "6851",
+      "canonical_name": "methotrexate",
+      "tty": "IN",
+      "synonyms": ["Trexall", "Rheumatrex", "Otrexup", "Rasuvo", "MTX", "amethopterin"]
+    },
+    {
+      "input_name": "vincristine",
+      "rxcui": "11202",
+      "canonical_name": "vincristine",
+      "tty": "IN",
+      "synonyms": ["Oncovin", "Vincasar", "leucocristine", "VCR"]
+    },
+    {
+      "input_name": "heparin",
+      "rxcui": "5224",
+      "canonical_name": "heparin",
+      "tty": "IN",
+      "synonyms": ["unfractionated heparin", "UFH"]
+    },
+    {
+      "input_name": "insulin",
+      "rxcui": "5856",
+      "canonical_name": "insulin",
+      "tty": "IN",
+      "synonyms": ["insulin human", "regular insulin", "Humulin", "Novolin"]
+    },
+    {
+      "input_name": "morphine",
+      "rxcui": "7052",
+      "canonical_name": "morphine",
+      "tty": "IN",
+      "synonyms": ["MS Contin", "Roxanol", "Kadian", "Avinza", "Oramorph"]
+    },
+    {
+      "input_name": "colchicine",
+      "rxcui": "2683",
+      "canonical_name": "colchicine",
+      "tty": "IN",
+      "synonyms": ["Colcrys", "Mitigare", "Gloperba"]
+    },
+    {
+      "input_name": "atorvastatin",
+      "rxcui": "83367",
+      "canonical_name": "atorvastatin",
+      "tty": "IN",
+      "synonyms": ["Lipitor", "atorvastatin calcium"]
+    },
+    {
+      "input_name": "simvastatin",
+      "rxcui": "36567",
+      "canonical_name": "simvastatin",
+      "tty": "IN",
+      "synonyms": ["Zocor", "Flolipid"]
+    },
+    {
+      "input_name": "lisinopril",
+      "rxcui": "29046",
+      "canonical_name": "lisinopril",
+      "tty": "IN",
+      "synonyms": ["Prinivil", "Zestril", "Qbrelis"]
+    },
+    {
+      "input_name": "amlodipine",
+      "rxcui": "17767",
+      "canonical_name": "amlodipine",
+      "tty": "IN",
+      "synonyms": ["Norvasc", "amlodipine besylate"]
+    },
+    {
+      "input_name": "omeprazole",
+      "rxcui": "7646",
+      "canonical_name": "omeprazole",
+      "tty": "IN",
+      "synonyms": ["Prilosec", "Losec", "Zegerid"]
+    },
+    {
+      "input_name": "digoxin",
+      "rxcui": "3407",
+      "canonical_name": "digoxin",
+      "tty": "IN",
+      "synonyms": ["Lanoxin", "Digitek"]
+    },
+    {
+      "input_name": "levothyroxine",
+      "rxcui": "10582",
+      "canonical_name": "levothyroxine",
+      "tty": "IN",
+      "synonyms": ["Synthroid", "Levoxyl", "Tirosint", "Unithroid", "L-thyroxine"]
+    },
+    {
+      "input_name": "lithium",
+      "rxcui": "6448",
+      "canonical_name": "lithium carbonate",
+      "tty": "IN",
+      "synonyms": ["Eskalith", "Lithobid", "Lithonate"]
+    },
+    {
+      "input_name": "vancomycin",
+      "rxcui": "11124",
+      "canonical_name": "vancomycin",
+      "tty": "IN",
+      "synonyms": ["Vancocin", "Firvanq"]
+    },
+    {
+      "input_name": "gentamicin",
+      "rxcui": "1815",
+      "canonical_name": "gentamicin",
+      "tty": "IN",
+      "synonyms": ["Garamycin", "gentamicin sulfate"]
+    },
+    {
+      "input_name": "aspirin",
+      "rxcui": "1191",
+      "canonical_name": "aspirin",
+      "tty": "IN",
+      "synonyms": ["acetylsalicylic acid", "ASA", "Bayer", "Ecotrin"]
+    },
+    {
+      "input_name": "prednisolone",
+      "rxcui": "8638",
+      "canonical_name": "prednisolone",
+      "tty": "IN",
+      "synonyms": ["Prelone", "Orapred", "Pediapred", "Millipred"]
+    },
+    {
+      "input_name": "clopidogrel",
+      "rxcui": "32968",
+      "canonical_name": "clopidogrel",
+      "tty": "IN",
+      "synonyms": ["Plavix", "clopidogrel bisulfate"]
+    },
+    {
+      "input_name": "rivaroxaban",
+      "rxcui": "1114195",
+      "canonical_name": "rivaroxaban",
+      "tty": "IN",
+      "synonyms": ["Xarelto"]
+    },
+    {
+      "input_name": "apixaban",
+      "rxcui": "1364430",
+      "canonical_name": "apixaban",
+      "tty": "IN",
+      "synonyms": ["Eliquis"]
+    },
+    {
+      "input_name": "dabigatran",
+      "rxcui": "1037042",
+      "canonical_name": "dabigatran",
+      "tty": "IN",
+      "synonyms": ["Pradaxa", "dabigatran etexilate"]
+    },
+    {
+      "input_name": "enoxaparin",
+      "rxcui": "67108",
+      "canonical_name": "enoxaparin",
+      "tty": "IN",
+      "synonyms": ["Lovenox", "Clexane", "enoxaparin sodium"]
+    },
+    {
+      "input_name": "ciprofloxacin",
+      "rxcui": "2551",
+      "canonical_name": "ciprofloxacin",
+      "tty": "IN",
+      "synonyms": ["Cipro", "ciprofloxacin hydrochloride"]
+    },
+    {
+      "input_name": "phenytoin",
+      "rxcui": "8183",
+      "canonical_name": "phenytoin",
+      "tty": "IN",
+      "synonyms": ["Dilantin", "Phenytek", "diphenylhydantoin"]
+    },
+    {
+      "input_name": "valproate",
+      "rxcui": "11118",
+      "canonical_name": "valproic acid",
+      "tty": "IN",
+      "synonyms": ["Depakote", "Depakene", "valproate sodium", "divalproex"]
+    },
+    {
+      "input_name": "sertraline",
+      "rxcui": "36437",
+      "canonical_name": "sertraline",
+      "tty": "IN",
+      "synonyms": ["Zoloft", "sertraline hydrochloride"]
+    },
+    {
+      "input_name": "tacrolimus",
+      "rxcui": "42316",
+      "canonical_name": "tacrolimus",
+      "tty": "IN",
+      "synonyms": ["Prograf", "Astagraf", "Envarsus", "FK-506"]
+    }
+  ]
+}

@@ -31,346 +31,47 @@ logger = logging.getLogger(__name__)
 
 # Format: normalized_inn → {variant: canonical_name}
 # All variants map to the INN (International Nonproprietary Name) as canonical
-DRUG_NAME_VARIANTS: dict[str, dict[str, str]] = {
-    # Analgesics / Antipyretics
-    "paracetamol": {
-        "inn": "paracetamol",
-        "us": "acetaminophen",
-        "uk": "paracetamol",
-        "brand_us": "tylenol",
-        "brand_uk": "panadol",
-        "brand_cis": "панадол",
-        "russian": "парацетамол",
-        "uzbek": "paratsetamol",
-        "cis_brand": "эффералган",
-    },
-    "ibuprofen": {
-        "inn": "ibuprofen",
-        "us": "ibuprofen",
-        "uk": "ibuprofen",
-        "brand_us": "advil",
-        "brand_uk": "nurofen",
-        "brand_cis": "нурофен",
-        "russian": "ибупрофен",
-        "uzbek": "ibuprofen",
-    },
-    "diclofenac": {
-        "inn": "diclofenac",
-        "us": "diclofenac",
-        "uk": "diclofenac",
-        "brand_uk": "voltarol",
-        "brand_cis": "вольтарен",
-        "russian": "диклофенак",
-        "uzbek": "diklofenak",
-    },
-    # Cardiovascular
-    "adrenaline": {
-        "inn": "epinephrine",
-        "us": "epinephrine",
-        "uk": "adrenaline",
-        "brand": "epipen",
-        "russian": "адреналин",
-        "uzbek": "adrenalin",
-    },
-    "noradrenaline": {
-        "inn": "norepinephrine",
-        "us": "norepinephrine",
-        "uk": "noradrenaline",
-        "russian": "норадреналин",
-    },
-    "frusemide": {
-        "inn": "furosemide",
-        "us": "furosemide",
-        "uk": "furosemide",
-        "legacy_uk": "frusemide",
-        "brand_us": "lasix",
-        "brand_cis": "лазикс",
-        "russian": "фуросемид",
-        "uzbek": "furosemid",
-    },
-    "atenolol": {
-        "inn": "atenolol",
-        "us": "atenolol",
-        "uk": "atenolol",
-        "brand": "tenormin",
-        "russian": "атенолол",
-    },
-    "metoprolol": {
-        "inn": "metoprolol",
-        "us": "metoprolol",
-        "uk": "metoprolol",
-        "brand_us": "lopressor",
-        "brand_cis": "беталок",
-        "russian": "метопролол",
-    },
-    "lisinopril": {
-        "inn": "lisinopril",
-        "us": "lisinopril",
-        "uk": "lisinopril",
-        "brand_us": "zestril",
-        "brand_cis": "диротон",
-        "russian": "лизиноприл",
-    },
-    "amlodipine": {
-        "inn": "amlodipine",
-        "us": "amlodipine",
-        "uk": "amlodipine",
-        "brand_us": "norvasc",
-        "brand_cis": "норваск",
-        "russian": "амлодипин",
-    },
-    "warfarin": {
-        "inn": "warfarin",
-        "us": "warfarin",
-        "uk": "warfarin",
-        "brand_us": "coumadin",
-        "brand_uk": "marevan",
-        "russian": "варфарин",
-    },
-    "aspirin": {
-        "inn": "acetylsalicylic acid",
-        "us": "aspirin",
-        "uk": "aspirin",
-        "generic": "acetylsalicylic acid",
-        "brand": "aspirin",
-        "brand_cis": "аспирин",
-        "russian": "аспирин",
-        "uzbek": "aspirin",
-    },
-    # Antibiotics
-    "amoxicillin": {
-        "inn": "amoxicillin",
-        "us": "amoxicillin",
-        "uk": "amoxicillin",
-        "brand_us": "amoxil",
-        "brand_cis": "флемоксин",
-        "russian": "амоксициллин",
-        "uzbek": "amoksitsillin",
-    },
-    "co-amoxiclav": {
-        "inn": "amoxicillin/clavulanic acid",
-        "us": "amoxicillin-clavulanate",
-        "uk": "co-amoxiclav",
-        "brand_us": "augmentin",
-        "brand_uk": "augmentin",
-        "brand_cis": "аугментин",
-        "russian": "амоксиклав",
-        "uzbek": "amoksiklav",
-    },
-    "ciprofloxacin": {
-        "inn": "ciprofloxacin",
-        "us": "ciprofloxacin",
-        "uk": "ciprofloxacin",
-        "brand_us": "cipro",
-        "brand_cis": "ципрофлоксацин",
-        "russian": "ципрофлоксацин",
-        "uzbek": "siprofloksatsin",
-    },
-    "metronidazole": {
-        "inn": "metronidazole",
-        "us": "metronidazole",
-        "uk": "metronidazole",
-        "brand_us": "flagyl",
-        "brand_cis": "метронидазол",
-        "russian": "метронидазол",
-    },
-    "trimethoprim": {
-        "inn": "trimethoprim",
-        "us": "trimethoprim",
-        "uk": "trimethoprim",
-        "co_formulation_us": "cotrimoxazole",
-        "co_formulation_uk": "co-trimoxazole",
-        "brand": "bactrim",
-    },
-    # Endocrinology
-    "metformin": {
-        "inn": "metformin",
-        "us": "metformin",
-        "uk": "metformin",
-        "brand_us": "glucophage",
-        "brand_cis": "глюкофаж",
-        "russian": "метформин",
-        "uzbek": "metformin",
-    },
-    "glibenclamide": {
-        "inn": "glibenclamide",
-        "us": "glyburide",
-        "uk": "glibenclamide",
-        "brand_us": "diabeta",
-        "russian": "глибенкламид",
-    },
-    "levothyroxine": {
-        "inn": "levothyroxine",
-        "us": "levothyroxine",
-        "uk": "levothyroxine",
-        "brand_us": "synthroid",
-        "brand_uk": "levothyroxine",
-        "brand_cis": "L-тироксин",
-        "russian": "левотироксин",
-    },
-    # Respiratory
-    "salbutamol": {
-        "inn": "salbutamol",
-        "us": "albuterol",
-        "uk": "salbutamol",
-        "brand_uk": "ventolin",
-        "brand_us": "proventil",
-        "brand_cis": "вентолин",
-        "russian": "сальбутамол",
-        "uzbek": "salbutamol",
-    },
-    "beclometasone": {
-        "inn": "beclometasone",
-        "us": "beclomethasone",
-        "uk": "beclometasone",
-        "brand_uk": "clenil",
-        "brand_us": "qvar",
-        "russian": "беклометазон",
-    },
-    "prednisolone": {
-        "inn": "prednisolone",
-        "us": "prednisolone",
-        "uk": "prednisolone",
-        "us_equivalent": "prednisone",  # Prodrug; prednisolone is active form
-        "brand_cis": "преднизолон",
-        "russian": "преднизолон",
-    },
-    # Neurology / Psychiatry
-    "diazepam": {
-        "inn": "diazepam",
-        "us": "diazepam",
-        "uk": "diazepam",
-        "brand_us": "valium",
-        "brand_cis": "реланиум",
-        "russian": "диазепам",
-        "uzbek": "diazepam",
-    },
-    "haloperidol": {
-        "inn": "haloperidol",
-        "us": "haloperidol",
-        "uk": "haloperidol",
-        "brand_us": "haldol",
-        "brand_cis": "галоперидол",
-        "russian": "галоперидол",
-    },
-    "sertraline": {
-        "inn": "sertraline",
-        "us": "sertraline",
-        "uk": "sertraline",
-        "brand_us": "zoloft",
-        "brand_uk": "lustral",
-        "brand_cis": "золофт",
-        "russian": "сертралин",
-    },
-    "amitriptyline": {
-        "inn": "amitriptyline",
-        "us": "amitriptyline",
-        "uk": "amitriptyline",
-        "brand_cis": "амитриптилин",
-        "russian": "амитриптилин",
-    },
-    "carbamazepine": {
-        "inn": "carbamazepine",
-        "us": "carbamazepine",
-        "uk": "carbamazepine",
-        "brand_us": "tegretol",
-        "brand_cis": "финлепсин",
-        "russian": "карбамазепин",
-        "uzbek": "karbamazepin",
-    },
-    # Anticoagulants
-    "heparin": {
-        "inn": "heparin",
-        "us": "heparin",
-        "uk": "heparin",
-        "brand_cis": "гепарин",
-        "russian": "гепарин",
-    },
-    "enoxaparin": {
-        "inn": "enoxaparin",
-        "us": "enoxaparin",
-        "uk": "enoxaparin",
-        "brand": "clexane",
-        "brand_us": "lovenox",
-        "brand_cis": "клексан",
-        "russian": "эноксапарин",
-    },
-    # Gastrointestinal
-    "omeprazole": {
-        "inn": "omeprazole",
-        "us": "omeprazole",
-        "uk": "omeprazole",
-        "brand_us": "prilosec",
-        "brand_uk": "losec",
-        "brand_cis": "омез",
-        "russian": "омепразол",
-        "uzbek": "omeprazol",
-    },
-    # Statins
-    "atorvastatin": {
-        "inn": "atorvastatin",
-        "us": "atorvastatin",
-        "uk": "atorvastatin",
-        "brand_us": "lipitor",
-        "brand_cis": "липримар",
-        "russian": "аторвастатин",
-    },
-    "simvastatin": {
-        "inn": "simvastatin",
-        "us": "simvastatin",
-        "uk": "simvastatin",
-        "brand_us": "zocor",
-        "brand_cis": "зокор",
-        "russian": "симвастатин",
-    },
-    # Renal / Diabetes
-    "spironolactone": {
-        "inn": "spironolactone",
-        "us": "spironolactone",
-        "uk": "spironolactone",
-        "brand_us": "aldactone",
-        "brand_cis": "альдактон",
-        "russian": "спиронолактон",
-    },
-    # Opioids
-    "morphine": {
-        "inn": "morphine",
-        "us": "morphine",
-        "uk": "morphine",
-        "brand_cis": "морфин",
-        "russian": "морфин",
-    },
-    "tramadol": {
-        "inn": "tramadol",
-        "us": "tramadol",
-        "uk": "tramadol",
-        "brand_us": "ultram",
-        "brand_cis": "трамадол",
-        "russian": "трамадол",
-        "uzbek": "tramadol",
-    },
-    # Vitamins / Supplements
-    "cyanocobalamin": {
-        "inn": "cyanocobalamin",
-        "us": "vitamin b12",
-        "uk": "cyanocobalamin",
-        "common": "vitamin b-12",
-        "russian": "цианокобаламин",
-    },
-    "cholecalciferol": {
-        "inn": "colecalciferol",
-        "uk": "colecalciferol",
-        "us": "cholecalciferol",
-        "common": "vitamin d3",
-        "russian": "холекальциферол",
-    },
-}
+# DRUG_NAME_VARIANTS data is no longer hardcoded here. It is loaded from
+# `curaniq/data/clinical/cis_drug_variants.json` (with full provenance
+# metadata) by VendoredSnapshotProvider in demo, and from the UZ MOH
+# live connector in clinician_prod (Session F target).
+#
+# This module retains a vendored loader (_load_cis_variants) for backward
+# compatibility with the L2-15 multi-language resolver helpers below.
+# Production consumers should use ClinicalKnowledgeProvider directly.
+
+_CIS_VARIANTS_LOADED: dict[str, dict[str, str]] | None = None
+
+
+def _load_cis_variants() -> dict[str, dict[str, str]]:
+    """Load CIS drug variants from vendored snapshot. Cached after first call."""
+    global _CIS_VARIANTS_LOADED
+    if _CIS_VARIANTS_LOADED is not None:
+        return _CIS_VARIANTS_LOADED
+    import json
+    from pathlib import Path
+    snapshot_path = Path(__file__).resolve().parent.parent.parent / "data" / "clinical" / "cis_drug_variants.json"
+    with snapshot_path.open(encoding="utf-8") as f:
+        doc = json.load(f)
+    if "_metadata" not in doc:
+        raise RuntimeError(f"{snapshot_path} missing required _metadata block")
+    _CIS_VARIANTS_LOADED = dict(doc["drugs"])
+    logger.info("L2-15 CIS variants: loaded %d drugs from %s (snapshot %s)",
+                len(_CIS_VARIANTS_LOADED), snapshot_path.name,
+                doc["_metadata"].get("snapshot_version", "unknown"))
+    return _CIS_VARIANTS_LOADED
+
+
+def _drug_name_variants() -> dict[str, dict[str, str]]:
+    """Backward-compat helper: returns the dict the old DRUG_NAME_VARIANTS held."""
+    return _load_cis_variants()
+
 
 
 def _build_reverse_lookup() -> dict[str, str]:
     """Build reverse lookup: any variant name → canonical INN."""
     reverse: dict[str, str] = {}
-    for canonical, variants in DRUG_NAME_VARIANTS.items():
+    for canonical, variants in _drug_name_variants().items():
         inn = variants.get("inn", canonical)
         # Map canonical to INN
         reverse[canonical.lower()] = inn
@@ -429,10 +130,10 @@ def get_all_variants(inn: str) -> dict[str, str]:
     """
     inn_lower = inn.lower()
     # Search by canonical key
-    if inn_lower in DRUG_NAME_VARIANTS:
-        return DRUG_NAME_VARIANTS[inn_lower]
+    if inn_lower in _drug_name_variants():
+        return _drug_name_variants()[inn_lower]
     # Search by INN value
-    for canonical, variants in DRUG_NAME_VARIANTS.items():
+    for canonical, variants in _drug_name_variants().items():
         if variants.get("inn", "").lower() == inn_lower:
             return variants
     return {}
@@ -606,63 +307,61 @@ LOINC_LOOKUP: dict[str, tuple[str, str]] = {
 }
 
 # RxCUI lookup for common drugs (production: full NLM API)
-RXCUI_LOOKUP: dict[str, str] = {
-    "paracetamol":    "161",
-    "acetaminophen":  "161",
-    "ibuprofen":      "5640",
-    "amoxicillin":    "723",
-    "metformin":      "6809",
-    "atorvastatin":   "83367",
-    "simvastatin":    "36567",
-    "lisinopril":     "29046",
-    "amlodipine":     "17767",
-    "metoprolol":     "41493",
-    "atenolol":       "1202",
-    "warfarin":       "11289",
-    "aspirin":        "1191",
-    "omeprazole":     "7646",
-    "salbutamol":     "2103",
-    "albuterol":      "2103",
-    "ciprofloxacin":  "2551",
-    "metronidazole":  "6922",
-    "diazepam":       "3322",
-    "sertraline":     "36437",
-    "carbamazepine":  "2002",
-    "levothyroxine":  "10582",
-    "furosemide":     "4603",
-    "spironolactone": "9997",
-    "enoxaparin":     "67108",
-    "heparin":        "5224",
-    "morphine":       "7052",
-    "tramadol":       "41493",
-    "prednisolone":   "8638",
-    "dexamethasone":  "3264",
-    "haloperidol":    "5134",
-    "amitriptyline":  "704",
-}
+RXCUI_LOOKUP_LEGACY_NOTE = (
+    "RXCUI_LOOKUP module-level dict was REMOVED in FIX-34 (Session B). "
+    "RxCUIs are now retrieved through ClinicalKnowledgeProvider.normalize_drug() "
+    "— live RxNorm in clinician_prod, vendored snapshot in demo. "
+    "See docs/MIGRATION_PLAYBOOK.md."
+)
 
 
 class OntologyNormalizer:
     """
     L2-1: Ontology normalizer for all clinical terms.
-    
+
     Normalizes drug names, clinical conditions, diagnoses, and lab values
     to their canonical ontology codes.
-    
+
     Production: uses monthly NLM API sync with RxNorm, SNOMED CT,
-    ICD-10, LOINC web services. This implementation uses the
-    curated lookup tables above, augmented by L2-15 drug name resolver.
+    ICD-10, LOINC web services via ClinicalKnowledgeProvider for drugs
+    (Session B); SNOMED/ICD10/LOINC migration is a future session.
     """
 
-    def normalize_drug(self, drug_name: str) -> OntologyMapping:
-        """Normalize a drug name to INN + RxCUI."""
-        canonical, resolved = resolve_drug_name(drug_name)
-        rxcui = RXCUI_LOOKUP.get(canonical.lower())
+    def __init__(self, knowledge_provider=None):
+        """
+        Args:
+            knowledge_provider: ClinicalKnowledgeProvider for drug-name
+                resolution. If None, drug normalization falls back to
+                the vendored CIS variants snapshot only (no RxCUI for
+                non-vendored drugs).
+        """
+        self._kp = knowledge_provider
 
+    def normalize_drug(self, drug_name: str) -> OntologyMapping:
+        """Normalize a drug name to INN + RxCUI via knowledge provider."""
+        # Try the provider first (live in prod, vendored in demo)
+        if self._kp is not None:
+            try:
+                norm = self._kp.normalize_drug(drug_name)
+                if norm is not None:
+                    return OntologyMapping(
+                        original_term=drug_name,
+                        canonical_term=norm.canonical_name,
+                        rxcui=norm.rxcui,
+                        confidence=1.0,
+                    )
+            except Exception:
+                # KnowledgeUnavailableError or transient failure —
+                # fall through to legacy CIS-variants-only resolution
+                pass
+
+        # Legacy fallback: CIS variant resolution (for Cyrillic, Uzbek
+        # local names that RxNorm doesn't have until Session F UZ MOH)
+        canonical, resolved = resolve_drug_name(drug_name)
         return OntologyMapping(
             original_term=drug_name,
             canonical_term=canonical,
-            rxcui=rxcui,
+            rxcui=None,
             confidence=1.0 if resolved else 0.7,
         )
 
