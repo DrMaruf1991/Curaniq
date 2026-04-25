@@ -149,6 +149,76 @@ class InMemoryBackend(AuditStorageBackend):
         return None
 
 
+class PostgresBackend(AuditStorageBackend):
+    """FIX-31: production audit ledger backed by curaniq.db.AuditRepository.
+
+    Hash-chain semantics maintained inside the DB layer (per-tenant chain head).
+    This adapter forwards the existing JSONL-style entry_dict into the new
+    `audit_events` table, preserving the existing append-only contract.
+    """
+
+    def __init__(self):
+        # Lazy-import so audit module doesn't pull DB stack when in JSONL mode.
+        from curaniq.db import init_db
+        init_db()  # Idempotent — safe to call repeatedly.
+
+    def append(self, entry_dict: dict) -> None:
+        from curaniq.db import get_session, AuditRepository, TenantRepository
+        import uuid as _uuid
+        with get_session() as s:
+            TenantRepository(s).ensure_default()
+            qid_raw = entry_dict.get("query_id")
+            try:
+                qid = _uuid.UUID(qid_raw) if qid_raw else None
+            except Exception:
+                qid = None
+            AuditRepository(s).append(
+                event_type=entry_dict.get("event_type", "query_answered"),
+                payload=entry_dict,
+                query_id=qid,
+                pipeline_version=entry_dict.get("pipeline_version"),
+            )
+
+    def get_by_query_id(self, query_id: str) -> list[dict]:
+        from curaniq.db import get_session, AuditRepository
+        import uuid as _uuid
+        try:
+            qid = _uuid.UUID(query_id)
+        except Exception:
+            return []
+        with get_session() as s:
+            rows = AuditRepository(s).list_for_query(qid)
+            return [
+                {"sequence": r.sequence, "event_type": r.event_type,
+                 "payload_json": r.payload_json, "chain_hash": r.chain_hash,
+                 "created_at": r.created_at.isoformat()}
+                for r in rows
+            ]
+
+    def get_all(self) -> list[dict]:
+        from curaniq.db import get_session, AuditRepository
+        with get_session() as s:
+            return AuditRepository(s).export()
+
+    def count(self) -> int:
+        from curaniq.db import get_session, AuditRepository
+        with get_session() as s:
+            return AuditRepository(s).count()
+
+    def get_last_hash(self) -> Optional[str]:
+        from curaniq.db import get_session
+        from curaniq.db.models import AuditChainHead, DEFAULT_TENANT_ID
+        with get_session() as s:
+            head = s.get(AuditChainHead, DEFAULT_TENANT_ID)
+            return head.head_chain_hash if head else None
+
+    def verify_chain(self) -> tuple[bool, Optional[str]]:
+        """Cryptographic chain verification — DB-backed only."""
+        from curaniq.db import get_session, AuditRepository
+        with get_session() as s:
+            return AuditRepository(s).verify_chain()
+
+
 def get_storage_backend() -> AuditStorageBackend:
     """
     Factory: return the appropriate storage backend.
@@ -161,18 +231,42 @@ def get_storage_backend() -> AuditStorageBackend:
     """
     backend_type = os.environ.get("CURANIQ_AUDIT_BACKEND", "jsonl").lower()
 
+    from curaniq.truth_core.config import is_clinician_prod
+
     if backend_type == "memory":
+        if is_clinician_prod():
+            raise RuntimeError(
+                "clinician_prod forbids in-memory audit storage; set CURANIQ_AUDIT_BACKEND=postgresql."
+            )
         return InMemoryBackend()
     elif backend_type == "jsonl":
+        if is_clinician_prod():
+            raise RuntimeError(
+                "clinician_prod forbids JSONL audit storage; set CURANIQ_AUDIT_BACKEND=postgresql."
+            )
         return JSONLFileBackend()
     elif backend_type == "postgresql":
-        # PostgreSQL audit backend deferred until L0-7 Data Architecture module is built.
-        # Graceful fallback: use JSONL with a warning so deployments don't crash.
-        logger.warning(
-            "L9-1: CURANIQ_AUDIT_BACKEND=postgresql requested but not yet implemented. "
-            "Falling back to JSONL file backend. Audit integrity maintained. "
-            "PostgreSQL backend requires L0-7 Data Architecture (SQLAlchemy models + migrations)."
-        )
-        return JSONLFileBackend()
+        # Real Postgres audit backend wired to curaniq.db.AuditRepository.
+        # In clinician_prod this must fail closed. Silent fallback would make the
+        # clinical audit trail incomplete and is therefore forbidden.
+        try:
+            return PostgresBackend()
+        except Exception as e:
+            from curaniq.truth_core.config import is_clinician_prod
+            logger.error("L9-1: PostgresBackend unavailable (%s).", e)
+            if is_clinician_prod():
+                raise RuntimeError(
+                    "clinician_prod requires working PostgreSQL audit backend; "
+                    "set CURANIQ_DATABASE_URL, run migrations, and set "
+                    "CURANIQ_AUDIT_BACKEND=postgresql."
+                ) from e
+            logger.warning("Non-production mode: falling back to JSONL audit backend.")
+            return JSONLFileBackend()
     else:
+        from curaniq.truth_core.config import is_clinician_prod
+        if is_clinician_prod():
+            raise RuntimeError(
+                "clinician_prod requires CURANIQ_AUDIT_BACKEND=postgresql; "
+                f"got {backend_type!r}."
+            )
         return JSONLFileBackend()
