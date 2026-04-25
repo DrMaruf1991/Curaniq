@@ -34,11 +34,13 @@ class InteractionMode(str, Enum):
 class EvidenceTier(str, Enum):
     SYSTEMATIC_REVIEW = "systematic_review"  # Oxford CEBM Level 1
     RCT               = "rct"               # Level 2
-    GUIDELINE         = "guideline"         # Level 2b
+    GUIDELINE         = "guideline"         # Level 2b / official guideline
     COHORT            = "cohort"            # Level 3
     CASE_REPORT       = "case_report"       # Level 4
     EXPERT_OPINION    = "expert_opinion"    # Level 5
+    NEGATIVE_TRIAL    = "negative_trial"    # Important negative/neutral evidence
     PREPRINT          = "preprint"          # QUARANTINED
+    UNKNOWN           = "unknown"           # Must be downgraded/blocked in clinician_prod
 
 
 class GradeLevel(str, Enum):
@@ -54,10 +56,12 @@ class ClaimType(str, Enum):
     DRUG_INTERACTION = "drug_interaction"
     EFFICACY         = "efficacy"
     SAFETY_SIGNAL    = "safety_signal"
+    SAFETY_WARNING   = "safety_warning"
     DIAGNOSTIC       = "diagnostic"
     MONITORING       = "monitoring"
     PROGNOSIS        = "prognosis"
     GENERAL          = "general"
+    UNKNOWN          = "unknown"
 
 
 class ConfidenceLevel(str, Enum):
@@ -86,12 +90,15 @@ class TriageResult(str, Enum):
 
 
 class Jurisdiction(str, Enum):
-    UZ  = "UZ"   # Uzbekistan
-    RU  = "RU"   # Russia / Minzdrav
-    US  = "US"   # FDA / US guidelines
-    UK  = "UK"   # NICE
-    EU  = "EU"   # EMA
-    INT = "INT"  # International (WHO)
+    UZ   = "UZ"    # Uzbekistan
+    RU   = "RU"    # Russia / Minzdrav
+    US   = "US"    # FDA / US guidelines
+    UK   = "UK"    # NICE
+    EU   = "EU"    # EMA
+    INT  = "INT"   # International
+    INTL = "INT"   # Backward-compatible alias used by older layers
+    WHO  = "WHO"   # WHO-specific guidance
+    CIS  = "CIS"   # CIS/regional guidance
 
 
 class EvidenceSourceType(str, Enum):
@@ -106,6 +113,11 @@ class EvidenceSourceType(str, Enum):
     RETRACTION_WATCH= "retraction_watch"
     CROSSREF        = "crossref"
     WHO             = "who"
+    FDA             = "fda"
+    LABEL           = "label"
+    GUIDELINE       = "guideline"
+    LOCAL_PROTOCOL  = "local_protocol"
+    LICENSED_DB     = "licensed_db"
     LACTMED         = "lactmed"
     CREDIBLEMEDS    = "crediblemeds"
     UZ_MOH          = "uz_moh"
@@ -190,9 +202,20 @@ class EvidenceObject(BaseModel):
     snippet_hash: Optional[str] = None          # SHA-256 of snippet for hash-lock (L4-14)
     url: Optional[str] = None
     authors: list[str] = Field(default_factory=list)
+    # Source date != retrieval date. Do not confuse these in clinical output.
     published_date: Optional[datetime] = None
+    source_last_updated_at: Optional[datetime] = None
+    source_version: Optional[str] = None
+    retrieved_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
     ingested_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
     last_verified_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
+    content_hash: Optional[str] = None
+    license_status: Optional[Literal["open", "licensed", "restricted", "unknown"]] = "unknown"
+    superseded_by: Optional[str] = None
+    source_trust_score: float = Field(default=0.5, ge=0.0, le=1.0)
+    applicability_score: float = Field(default=0.5, ge=0.0, le=1.0)
+    patient_subgroup_match: Optional[str] = None
+    guideline_status: Optional[Literal["current", "superseded", "withdrawn", "unknown"]] = "unknown"
     tier: EvidenceTier
     grade: Optional[GradeLevel] = None
     jurisdiction: Jurisdiction = Jurisdiction.INT
@@ -211,7 +234,9 @@ class EvidenceObject(BaseModel):
             EvidenceTier.COHORT:            0.7,
             EvidenceTier.CASE_REPORT:       0.5,
             EvidenceTier.EXPERT_OPINION:    0.3,
+            EvidenceTier.NEGATIVE_TRIAL:    0.85,
             EvidenceTier.PREPRINT:          0.1,
+            EvidenceTier.UNKNOWN:           0.0,
         }
         return mapping.get(self.tier, 0.3)
 

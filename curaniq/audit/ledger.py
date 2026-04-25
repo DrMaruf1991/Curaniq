@@ -232,7 +232,7 @@ class AuditLedger:
             "triage_result": entry.triage_result.value,
             "mode": entry.mode.value,
             "evidence_pack_id": str(entry.evidence_pack_id),
-            "evidence_count": entry.evidence_count,
+            "evidence_count": len(entry.evidence_source_ids),
             "safety_suite_passed": entry.safety_suite_passed,
             "refused": entry.refused,
             "refusal_reason": entry.refusal_reason,

@@ -13,12 +13,14 @@ from datetime import datetime, timezone
 from typing import Any, Optional
 from uuid import UUID
 
-from fastapi import FastAPI, HTTPException, Request, status
+from fastapi import FastAPI, HTTPException, Request, Header, status
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 from pydantic import BaseModel, Field
 
 from curaniq.core.pipeline import CURANIQPipeline
+from curaniq.truth_core.config import is_clinician_prod
+from curaniq.db.production import run_production_readiness_checks
 from curaniq.models.schemas import (
     ClinicalQuery,
     CURANIQResponse,
@@ -54,7 +56,7 @@ app.add_middleware(
     allow_origins=_cors_origins,
     allow_credentials=True,
     allow_methods=["GET", "POST"],
-    allow_headers=["Content-Type", "Authorization"],
+    allow_headers=["Content-Type", "Authorization", "X-CURANIQ-API-KEY", "X-CURANIQ-ROLE"],
 )
 
 _pipeline: Optional[CURANIQPipeline] = None
@@ -252,12 +254,14 @@ def _build_query(req: ClinicalQueryRequest) -> ClinicalQuery:
 
 @app.get("/health", tags=["System"])
 async def health_check():
+    readiness = run_production_readiness_checks(require_postgres=is_clinician_prod()) if is_clinician_prod() else None
     return {
         "status": "operational",
         "system": "CURANIQ Medical Evidence Operating System",
         "version": "1.0.0",
         "pipeline_ready": _pipeline is not None,
         "timestamp": datetime.now(timezone.utc).isoformat(),
+        "readiness": None if readiness is None else {"passed": readiness.passed, "checks": readiness.checks, "failures": readiness.failures},
     }
 
 @app.get("/info", tags=["System"])
@@ -276,8 +280,26 @@ async def system_info():
         },
     }
 
+def _enforce_production_api_auth(req: ClinicalQueryRequest, api_key: Optional[str], authenticated_role: Optional[str]) -> None:
+    """Minimal production guard. Replace with JWT/OIDC before hospital deployment."""
+    if not is_clinician_prod():
+        return
+    expected_key = os.environ.get("CURANIQ_API_KEY")
+    if not expected_key or api_key != expected_key:
+        raise HTTPException(status_code=401, detail="Production API key required")
+    if authenticated_role and authenticated_role != req.user_role:
+        raise HTTPException(status_code=403, detail="Authenticated role does not match requested role")
+    if not authenticated_role and req.user_role == "clinician":
+        raise HTTPException(status_code=403, detail="Clinician role cannot be self-declared in clinician_prod")
+
+
 @app.post("/query", response_model=CURANIQAPIResponse, tags=["Clinical Query"])
-async def process_clinical_query(request: ClinicalQueryRequest):
+async def process_clinical_query(
+    request: ClinicalQueryRequest,
+    x_curaniq_api_key: Optional[str] = Header(default=None),
+    x_curaniq_role: Optional[str] = Header(default=None),
+):
+    _enforce_production_api_auth(request, x_curaniq_api_key, x_curaniq_role)
     pipeline = get_pipeline()
     query = _build_query(request)
     try:
@@ -290,14 +312,22 @@ async def process_clinical_query(request: ClinicalQueryRequest):
         raise HTTPException(status_code=500, detail="Internal pipeline error. Check server logs.")
 
 @app.post("/query/quick", response_model=CURANIQAPIResponse, tags=["Clinical Query"])
-async def quick_answer(request: ClinicalQueryRequest):
+async def quick_answer(
+    request: ClinicalQueryRequest,
+    x_curaniq_api_key: Optional[str] = Header(default=None),
+    x_curaniq_role: Optional[str] = Header(default=None),
+):
     request.mode = "quick_answer"
-    return await process_clinical_query(request)
+    return await process_clinical_query(request, x_curaniq_api_key, x_curaniq_role)
 
 @app.post("/query/deep", response_model=CURANIQAPIResponse, tags=["Clinical Query"])
-async def evidence_deep_dive(request: ClinicalQueryRequest):
+async def evidence_deep_dive(
+    request: ClinicalQueryRequest,
+    x_curaniq_api_key: Optional[str] = Header(default=None),
+    x_curaniq_role: Optional[str] = Header(default=None),
+):
     request.mode = "evidence_deep_dive"
-    return await process_clinical_query(request)
+    return await process_clinical_query(request, x_curaniq_api_key, x_curaniq_role)
 
 @app.get("/audit/{query_id}", tags=["Audit"])
 async def get_audit_trail(query_id: str):
@@ -392,4 +422,5 @@ async def global_exception_handler(request: Request, exc: Exception):
         "error": "Internal pipeline error",
         "detail": str(exc),
         "timestamp": datetime.now(timezone.utc).isoformat(),
+        "readiness": None if readiness is None else {"passed": readiness.passed, "checks": readiness.checks, "failures": readiness.failures},
     })
