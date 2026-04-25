@@ -1,0 +1,33 @@
+# CURANIQ — Local development stack with Postgres
+# Usage:
+#   docker compose up -d              # start Postgres
+#   export CURANIQ_DATABASE_URL=postgresql+psycopg2://curaniq:curaniq@localhost:5432/curaniq
+#   export CURANIQ_AUDIT_BACKEND=postgresql
+#   alembic upgrade head              # run migrations
+#   pytest tests/test_db.py -v        # tests run against real Postgres
+#   python run.py                     # API server
+#
+# Production deployment uses managed Postgres (RDS, Cloud SQL, Yandex DB, etc.),
+# not this docker-compose. This is for local development and CI only.
+
+services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: curaniq_postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: curaniq
+      POSTGRES_PASSWORD: curaniq
+      POSTGRES_DB: curaniq
+    ports:
+      - "5432:5432"
+    volumes:
+      - curaniq_pg_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U curaniq -d curaniq"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+volumes:
+  curaniq_pg_data:

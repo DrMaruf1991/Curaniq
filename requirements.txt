@@ -1,0 +1,14 @@
+fastapi>=0.115,<1.0
+uvicorn[standard]>=0.30,<1.0
+pydantic>=2.8,<3.0
+aiohttp>=3.9,<4.0
+anthropic>=0.40,<1.0
+openai>=1.50,<2.0
+google-generativeai>=0.8,<1.0
+pytest>=8.0,<10.0
+# FIX-31: Postgres backbone
+sqlalchemy>=2.0,<3.0
+alembic>=1.13,<2.0
+psycopg2-binary>=2.9,<3.0
+# FIX-30: API e2e tests
+httpx>=0.27,<1.0
