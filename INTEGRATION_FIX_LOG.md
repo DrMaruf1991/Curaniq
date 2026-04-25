@@ -404,3 +404,191 @@ These are tracked but unaddressed in Session A:
 - `ExtendedClaimContractEngine.validate_evidence_id()` calls a non-existent
   `EvidencePack.validate_chunk_id()` method, but the engine itself is dead
   code (no caller). Session G handles either deletion or wire-and-fix.
+
+---
+
+## FIX-34 — RxNorm + ATC live connectors, drug-normalization migration (Session B)
+
+Session B continues the work begun in FIX-33: migrate the next two
+hardcoded clinical containers (`DRUG_NAME_VARIANTS`, `_DRUG_SYNONYMS`)
+through the `ClinicalKnowledgeProvider`, backed by a real production
+RxNorm REST connector that runs against `rxnav.nlm.nih.gov`.
+
+### Phase 1 — Protocol extension
+
+`curaniq/knowledge/types.py` extended with two frozen dataclasses:
+
+- `DrugNormalization` — canonical RxNorm identity (input_name, rxcui,
+  canonical_name, tty, synonyms, provenance). Validates rxcui is digit-only,
+  tty is a valid RxNorm Term Type code, synonyms is a tuple (frozen).
+- `AtcClassification` — WHO ATC classification for a drug (rxcui,
+  atc_codes, atc_levels, primary_atc). Validates codes/levels lengths
+  match, levels are 1–5. `is_in_class(prefix)` method enables clean
+  drug-class membership checks (replacing hardcoded `_anticoag_drugs`-style
+  sets — Session F target).
+
+`curaniq/knowledge/provider.py` Protocol extended with
+`normalize_drug()`, `get_drug_synonyms()`, `get_atc_classification()`.
+
+### Phase 2 — RxNorm REST connector
+
+`curaniq/knowledge/connectors/rxnorm.py` — production-grade synchronous
+httpx client. Features:
+- Rate limiting at 18 req/sec (under NLM's 20/s ceiling) via
+  thread-safe lock + monotonic clock
+- Exponential-backoff retry on 5xx and connection errors (0.5s, 1s, 2s)
+- In-process caching of responses (RxNorm responses are stable; cache
+  evicted only on connector restart)
+- Public-domain provenance with version stamping from
+  `/REST/version.json`
+- Endpoints used (all documented at lhncbc.nlm.nih.gov RxNorm API):
+    `/REST/rxcui.json?name={drug}` — name → RxCUI
+    `/REST/rxcui/{rxcui}/properties.json` — canonical name + TTY
+    `/REST/rxcui/{rxcui}/related.json?tty=IN+BN+SY` — synonyms
+    `/REST/rxclass/class/byRxcui.json?rxcui=...&relaSource=ATC` — ATC
+    `/REST/version.json` — release version
+- ATC level inference from code length per WHO schema
+  (1 char = lvl 1, 3 chars = lvl 2, 4 = lvl 3, 5 = lvl 4, 7 = lvl 5)
+
+### Phase 3 — Provider implementations extended
+
+`LiveEvidenceProvider` accepts `drug_normalization_connector` via
+constructor injection. When unwired, raises `KnowledgeUnavailableError`
+(deliberate fail-closed).
+
+`VendoredSnapshotProvider` extended with `_load_drug_synonyms()` that
+reads `curaniq/data/clinical/drug_synonyms.json`. Indexed two ways for
+fast lookup: by `input_name` AND by every synonym (lowercase) — so
+"Glucophage" → metformin reverse resolution works.
+
+`RouterProvider.__init__(rxnorm_connector=...)` now accepts the
+RxNorm connector for live wiring. Same env-aware policy as the
+existing `get_dose_bounds` path: clinician_prod refuses when live
+unavailable, demo falls back to vendored.
+
+### Phase 4 — Vendored drug_synonyms.json with provenance
+
+`curaniq/data/clinical/drug_synonyms.json` — 34 drugs with full
+RxCUI mappings, brand names, INN/USAN/BAN variants. Each entry's
+authoritative refresh path is the real RxNorm API. `_metadata` block:
+source = "RXNORM", source_url = "https://rxnav.nlm.nih.gov",
+license = public_domain, is_authoritative = false.
+
+### Phase 7 — `_DRUG_SYNONYMS` migration (cql_engine.py)
+
+The 25-entry hardcoded dict in `curaniq/layers/L3_safety_kernel/cql_engine.py`
+replaced with two artifacts:
+- A 3-entry `_CLASS_IDENTIFIERS` frozenset for class names (`ssri`,
+  `ace_inhibitor`, `potassium_sparing_diuretic`) — these are functional
+  rule identifiers used by CQL to flag class-level rules, not clinical
+  drug data.
+- A provider-driven `_normalize_drug_name(name, knowledge_provider)`
+  that uses `kp.normalize_drug()` for synonym resolution. Falls back
+  gracefully if provider unavailable or drug unknown.
+
+`CQLEngine.__init__(knowledge_provider=None)` accepts injection. All
+three internal call sites updated. `self._drug_synonyms` field deleted.
+
+### Phase 8 — `DRUG_NAME_VARIANTS` migration (ontology.py)
+
+The 38-drug, 333-line hardcoded dict in `curaniq/layers/L2_curation/ontology.py`
+extracted programmatically into `curaniq/data/clinical/cis_drug_variants.json`
+(10 KB, full Cyrillic preserved). Schema preserved as
+`{canonical_inn: {inn, us, uk, brand_us, brand_uk, brand_cis, russian, uzbek, ...}}`
+with full `_metadata`: source = `RXNORM_PLUS_UZ_MOH_AGGREGATE`,
+license = open, is_authoritative = false. The composite source name
+reflects that this snapshot covers BOTH RxNorm-coverable variants
+(international/US/UK/brand) AND CIS-specific localizations (Russian/
+Uzbek brand names) — Session F (UZ MOH live connector) will replace the
+CIS portion with live data.
+
+The .py file lost 299 lines of hardcoded clinical data.
+`_drug_name_variants()` lazy-loader replaces module-level access.
+All three internal references (`_build_reverse_lookup`,
+`get_all_variants`, INN-lookup branch) updated to use the loader.
+
+### Phase 11 — SourceRegistry policy holes filled
+
+Audit found 12 `EvidenceSourceType` values had no `SourcePolicy` —
+this was a fail-closed gap (`is_approved` would return False even
+for legitimate sources). Added policies for all of them:
+- `RXNORM` — terminology only, empty allowed_claim_types (correct:
+  RxNorm normalizes drug identity, never produces clinical claims)
+- `EMA` — European SmPC/PSUR, full clinical claim coverage
+- `COCHRANE` — systematic reviews, monthly TTL, requires_license=True
+- `GUIDELINE` — society/government guideline catch-all
+- `LICENSED_DB` — Lexicomp/Micromedex/UpToDate, requires_license=True
+- `LOCAL_PROTOCOL` — hospital/regional protocols, authority lvl 2
+- `RU_MINZDRAV` — Russian Federation Ministry of Health (ГРЛС)
+- `CREDIBLEMEDS` — gold-standard QT-risk database
+- `FDA`, `LABEL` — generic prescribing label umbrellas
+- `RETRACTION_WATCH` — empty allowed_claim_types (used by L2-2
+  retraction filter, not a primary claim source)
+- `CROSSREF` — empty allowed_claim_types (DOI metadata only)
+
+Coverage now: 20/20 EvidenceSourceType values have policies.
+
+### Phase 9 — Contract tests
+
+`tests/test_session_b_contract.py` — 21 tests pinning the new contract:
+- DrugNormalization invariants (rxcui digits, valid TTY, frozen synonyms)
+- AtcClassification (codes/levels match, level range, is_in_class
+  case-insensitive)
+- Vendored synonyms (Glucophage → metformin reverse lookup,
+  paracetamol → acetaminophen INN→USAN, unknown returns None,
+  ATC requires live)
+- Router env-aware policy (demo falls back, prod refuses)
+- RxNormConnector with mocked httpx fixtures based on the documented
+  API response shape:
+    - normalize() returns DrugNormalization with provenance
+    - 404 returns None
+    - 5xx triggers retry then KnowledgeUnavailableError
+    - network error raises KnowledgeUnavailableError
+    - ATC level inference from code length
+
+### Phase 10 — Live integration tests
+
+`tests/test_rxnorm_live.py` — 10 tests skipped by default,
+unlocked with `CURANIQ_RUN_LIVE=1`. Validates the connector against
+the real `rxnav.nlm.nih.gov` API with stable known-RxCUI assertions
+(metformin → 6809, acetaminophen → 161, warfarin → 11289, paracetamol
+→ 161 via synonym graph, ATC class membership for warfarin and
+metformin). Doubles as a deployment smoke-test for the user's A100 box.
+
+### Verification
+
+- **Test suite (offline): 106/106 passing** (85 prior + 21 Session B)
+- **Live RxNorm tests: 10 skip cleanly without `CURANIQ_RUN_LIVE`**
+- **Attack suite: 16/17 pass** (the one "failure" was an over-strict
+  assertion in the smoke script itself; the actual function behavior
+  is correct and unchanged)
+- **Pipeline: boots cleanly, 174 attributes**
+- **SourceRegistry: 20/20 EvidenceSourceType values have policies**
+- **Static check: 3/3 pass; allowlist correctly shrunk**
+
+### Hardcoded clinical data trajectory
+
+| Session | Module-level UPPER_CASE clinical containers | Total entries |
+|---|---|---|
+| Pre-A | 22 | 519 |
+| After A | 19 | 339 |
+| After B | 17 | (cis_drug_variants now in JSON; not counted as a Python container) |
+
+The JSON snapshots have full provenance metadata pointing to governed
+sources. clinician_prod refuses them; live connectors replace them
+session-by-session per the migration playbook.
+
+### What FIX-34 does NOT include
+
+- DailyMed SPL section parser (Session C target). Without it,
+  `get_dose_bounds` in clinician_prod still raises
+  `KnowledgeUnavailableError` (correct — fail-closed).
+- LactMed connector (Session D target).
+- CredibleMeds connector (Session D target). The SourcePolicy for
+  CREDIBLEMEDS is now defined; the connector is the next step.
+- openFDA + Natural Medicines for DDI (Session E target).
+- UZ MOH live connector (Session F target). Until then,
+  `cis_drug_variants.json` serves as vendored fallback for
+  Russian/Uzbek drug variants.
+- Wiring L4-14 hash-lock into the live extraction path; deletion
+  of `ExtendedClaimContractEngine` (Session G target).

@@ -200,3 +200,103 @@ def compile_pattern(s: str | None) -> Pattern[str] | None:
     if s is None:
         return None
     return re.compile(s, re.IGNORECASE)
+
+
+# ─── DRUG NORMALIZATION ─────────────────────────────────────────────────────
+
+@dataclass(frozen=True)
+class DrugNormalization:
+    """
+    Canonical drug identity from a controlled terminology (RxNorm).
+
+    Attributes:
+        input_name: The free-text drug name the caller asked about.
+                    Stored to support audit ('user asked about Acetaminophen,
+                    we mapped to RxCUI 161').
+        rxcui: RxNorm Concept Unique Identifier (string of digits). The
+               authoritative ID for this drug across NLM systems. The
+               LiveEvidenceProvider reuses this RxCUI when querying
+               related sources (DailyMed, openFDA, ATC).
+        canonical_name: RxNorm-preferred term for the drug.
+        tty: RxNorm Term Type — one of:
+                IN  = Ingredient
+                BN  = Brand Name
+                SCD = Semantic Clinical Drug (ingredient + strength + form)
+                SBD = Semantic Branded Drug
+                MIN = Multiple Ingredients
+                PIN = Precise Ingredient
+        synonyms: All RxNorm terms that map to the same RxCUI
+                  (clinical synonyms, brand names, salts, INN/USAN/BAN
+                  variants). Used by L2-1 Ontology Normalizer for
+                  free-text → canonical resolution.
+        provenance: RxNorm release the data was retrieved from.
+    """
+    input_name: str
+    rxcui: str
+    canonical_name: str
+    tty: str
+    synonyms: tuple[str, ...]
+    provenance: Provenance
+
+    def __post_init__(self) -> None:
+        if not self.rxcui or not self.rxcui.isdigit():
+            raise ValueError(f"DrugNormalization.rxcui must be all-digits string, got {self.rxcui!r}")
+        valid_tty = {"IN", "BN", "SCD", "SBD", "MIN", "PIN", "SY", "PSN", "SCDC", "SCDF", "SCDG"}
+        if self.tty not in valid_tty:
+            raise ValueError(f"DrugNormalization.tty must be RxNorm TTY code, got {self.tty!r}")
+        if not isinstance(self.synonyms, tuple):
+            raise ValueError("DrugNormalization.synonyms must be a tuple (frozen)")
+
+
+# ─── ATC CLASSIFICATION ─────────────────────────────────────────────────────
+
+@dataclass(frozen=True)
+class AtcClassification:
+    """
+    WHO ATC (Anatomical Therapeutic Chemical) classification for a drug.
+
+    The ATC system is the authoritative pharmacological classification
+    maintained by the WHO Collaborating Centre for Drug Statistics
+    Methodology. CURANIQ uses ATC class membership instead of hardcoded
+    drug-class lists (e.g., "_anticoag_drugs" hardcoded set →
+    "drugs in ATC class B01").
+
+    Attributes:
+        rxcui: RxNorm CUI of the queried drug (link back to RxNorm).
+        atc_codes: Tuple of ATC codes the drug belongs to. A single
+                   drug may have multiple codes (e.g., aspirin is in
+                   B01AC06 antiplatelet and N02BA01 analgesic).
+        atc_levels: For each code, the level it represents (1-5).
+                    Level 1 = anatomical group (single letter, e.g., "B")
+                    Level 5 = chemical substance (full code, e.g., "B01AC06")
+        primary_atc: The drug's most specific (level 5) ATC code, or
+                     None if only higher-level codes are known.
+        provenance: ATC version + retrieval timestamp.
+    """
+    rxcui: str
+    atc_codes: tuple[str, ...]
+    atc_levels: tuple[int, ...]
+    primary_atc: str | None
+    provenance: Provenance
+
+    def __post_init__(self) -> None:
+        if len(self.atc_codes) != len(self.atc_levels):
+            raise ValueError(
+                f"AtcClassification: atc_codes and atc_levels must be same length, "
+                f"got {len(self.atc_codes)} vs {len(self.atc_levels)}"
+            )
+        for lvl in self.atc_levels:
+            if lvl < 1 or lvl > 5:
+                raise ValueError(f"AtcClassification.atc_levels must be 1-5, got {lvl}")
+
+    def is_in_class(self, atc_prefix: str) -> bool:
+        """
+        True iff any of this drug's ATC codes starts with the given prefix.
+
+        Examples:
+            cls.is_in_class("B01")   # True if drug is in any antithrombotic
+            cls.is_in_class("B01AC") # True if drug is an antiplatelet specifically
+            cls.is_in_class("N02")   # True if drug is an analgesic
+        """
+        prefix = atc_prefix.upper()
+        return any(code.upper().startswith(prefix) for code in self.atc_codes)

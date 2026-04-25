@@ -32,7 +32,12 @@ from curaniq.knowledge.exceptions import (
     VendoredDataRefusedError,
 )
 from curaniq.knowledge.live import LiveEvidenceProvider
-from curaniq.knowledge.types import DoseBounds, FatalErrorRule
+from curaniq.knowledge.types import (
+    AtcClassification,
+    DoseBounds,
+    DrugNormalization,
+    FatalErrorRule,
+)
 from curaniq.knowledge.vendored import VendoredSnapshotProvider
 from curaniq.truth_core.config import is_clinician_prod
 
@@ -52,10 +57,22 @@ class RouterProvider:
 
     name = "router"
 
-    def __init__(self) -> None:
+    def __init__(
+        self,
+        *,
+        rxnorm_connector: object | None = None,
+    ) -> None:
+        """
+        Args:
+            rxnorm_connector: Inject for live drug-normalization. None =
+                live drug-normalization unwired (router falls back to
+                vendored in demo, refuses in clinician_prod).
+        """
         # Live is mandatory in every env. In Session A it has no
         # connectors yet, but it exists and conforms to the protocol.
-        self._live = LiveEvidenceProvider()
+        self._live = LiveEvidenceProvider(
+            drug_normalization_connector=rxnorm_connector,  # type: ignore[arg-type]
+        )
         self._prod = is_clinician_prod()
 
         if self._prod:
@@ -134,6 +151,57 @@ class RouterProvider:
             return
 
         yield from self._vendored.iter_fatal_error_rules()
+
+    # ─── L2-1 ONTOLOGY (Session B) ────────────────────────────────────────
+
+    def normalize_drug(self, name: str) -> DrugNormalization | None:
+        try:
+            result = self._live.normalize_drug(name)
+            self._live_hits += 1
+            return result
+        except KnowledgeUnavailableError as exc:
+            if self._prod:
+                self._refusals += 1
+                logger.warning(
+                    "RouterProvider: clinician_prod refusing normalize_drug(%s): %s",
+                    name, exc.reason,
+                )
+                raise
+            if self._vendored is None:
+                raise
+            logger.info(
+                "RouterProvider: live normalize_drug(%s) unavailable; falling back to vendored",
+                name,
+            )
+            self._fallback_hits += 1
+            return self._vendored.normalize_drug(name)
+
+    def get_drug_synonyms(self, name: str) -> list[str]:
+        try:
+            result = self._live.get_drug_synonyms(name)
+            self._live_hits += 1
+            return result
+        except KnowledgeUnavailableError as exc:
+            if self._prod:
+                self._refusals += 1
+                raise
+            if self._vendored is None:
+                raise
+            self._fallback_hits += 1
+            return self._vendored.get_drug_synonyms(name)
+
+    def get_atc_classification(self, name_or_rxcui: str) -> AtcClassification | None:
+        try:
+            result = self._live.get_atc_classification(name_or_rxcui)
+            self._live_hits += 1
+            return result
+        except KnowledgeUnavailableError as exc:
+            if self._prod:
+                self._refusals += 1
+                raise
+            # ATC is not vendored — return None in demo when live unavailable
+            self._fallback_hits += 1
+            return None
 
     # ─── DIAGNOSTICS ──────────────────────────────────────────────────────
 

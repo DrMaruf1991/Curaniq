@@ -5,31 +5,17 @@ This is the architecture's actual promise: at retrieval time, query the
 governed evidence sources (L1 connectors), extract the clinical fact from
 the live document, attach hash-bound provenance, and return.
 
-Scope of this Session A implementation
-======================================
-This file establishes the LIVE PATH SHAPE — the protocol-conforming
-provider that, in subsequent sessions, will be backed by real L1
-connectors against DailyMed (SPL XML), openFDA, RxNorm, CredibleMeds,
-LactMed, ATC/RxClass, and ISMP.
+Wired connectors:
+    Session B: RxNorm + RxClass (drug normalization, synonyms, ATC class)
 
-In Session A:
-- The provider IS protocol-conforming and import-safe.
-- It does NOT silently fall back to vendored data. If the L1 connector
-  layer is not yet wired for a given fact, the provider raises
-  KnowledgeUnavailableError. Callers (RouterProvider) decide what to do.
-- The fail-closed semantics are the contract — never relax this.
+Unwired sources (Sessions C-G):
+    DailyMed SPL parser (renal/hepatic/pediatric/dose bounds)
+    LactMed (pregnancy/lactation)
+    CredibleMeds (QT risk)
+    openFDA labels + Natural Medicines (DDI / food / herb)
 
-Subsequent sessions (B–G in the plan) wire each connector in turn:
-    Session B: RxNorm + ATC for synonyms / drug class
-    Session C: DailyMed SPL fetch + section parser for dose/renal/
-               hepatic/pediatric bounds (this is the hard one)
-    Session D: LactMed + CredibleMeds
-    Session E: openFDA labels + FAERS for DDI
-    Session F: Migrate all remaining engines through this protocol
-    Session G: Wire L4-14 hash-lock into the live extraction path
-
-Each session's connector arrives via dependency injection into this
-provider. The provider's external contract does not change.
+Unwired sources raise KnowledgeUnavailableError. The router enforces
+fail-closed in clinician_prod and falls back to vendored in demo.
 """
 from __future__ import annotations
 
@@ -37,32 +23,37 @@ import logging
 from typing import Iterator, Protocol
 
 from curaniq.knowledge.exceptions import KnowledgeUnavailableError
-from curaniq.knowledge.types import DoseBounds, FatalErrorRule
+from curaniq.knowledge.types import (
+    AtcClassification,
+    DoseBounds,
+    DrugNormalization,
+    FatalErrorRule,
+)
 
 logger = logging.getLogger(__name__)
 
 
 class _DoseBoundsConnector(Protocol):
-    """L1 connector that can resolve dose bounds for a single drug."""
     def fetch_bounds(self, drug: str, jurisdiction: str) -> DoseBounds | None: ...
 
 
 class _FatalRuleSource(Protocol):
-    """Source of ISMP-derived fatal-error rules. Refreshable."""
     def fetch_rules(self) -> Iterator[FatalErrorRule]: ...
+
+
+class _DrugNormalizationConnector(Protocol):
+    """Implemented by RxNormConnector."""
+    def normalize(self, name: str) -> DrugNormalization | None: ...
+    def get_synonyms(self, name: str) -> list[str]: ...
+    def get_atc(self, name_or_rxcui: str) -> AtcClassification | None: ...
 
 
 class LiveEvidenceProvider:
     """
     Live evidence-driven clinical knowledge. Authoritative.
 
-    Sessions B-onward inject real connectors here. In Session A the
-    connectors are None — every call raises KnowledgeUnavailableError,
-    forcing the RouterProvider's policy (which honors clinician_prod
-    fail-closed semantics) to surface as a refusal.
-
-    This is intentional: it makes the unwired state visible rather
-    than papered-over.
+    Connectors are injected at construction. Missing connectors surface
+    as KnowledgeUnavailableError — never silently degrade.
     """
 
     name = "live"
@@ -73,22 +64,23 @@ class LiveEvidenceProvider:
         *,
         dose_bounds_connector: _DoseBoundsConnector | None = None,
         fatal_rule_source: _FatalRuleSource | None = None,
+        drug_normalization_connector: _DrugNormalizationConnector | None = None,
     ) -> None:
         self._dose_conn = dose_bounds_connector
         self._fatal_src = fatal_rule_source
+        self._norm_conn = drug_normalization_connector
+
         if dose_bounds_connector is None:
-            logger.warning(
-                "LiveEvidenceProvider: no dose_bounds_connector wired — "
-                "get_dose_bounds() will raise KnowledgeUnavailableError. "
-                "Wire a DailyMed/openFDA connector in Session C."
-            )
-        if fatal_rule_source is None:
             logger.info(
-                "LiveEvidenceProvider: no fatal_rule_source — "
-                "iter_fatal_error_rules() will raise. Wire ISMP source in Session B."
+                "LiveEvidenceProvider: dose_bounds connector unwired (Session C target: DailyMed)"
+            )
+        if drug_normalization_connector is None:
+            logger.info(
+                "LiveEvidenceProvider: drug-normalization connector unwired "
+                "(inject RxNormConnector for live)"
             )
 
-    # ─── PROVIDER PROTOCOL ────────────────────────────────────────────────
+    # ─── L5-12 DOSE PLAUSIBILITY ──────────────────────────────────────────
 
     def get_dose_bounds(self, drug: str, jurisdiction: str = "US") -> DoseBounds | None:
         if self._dose_conn is None:
@@ -98,6 +90,8 @@ class LiveEvidenceProvider:
             )
         try:
             return self._dose_conn.fetch_bounds(drug.lower().strip(), jurisdiction)
+        except KnowledgeUnavailableError:
+            raise
         except Exception as exc:
             raise KnowledgeUnavailableError(
                 fact="dose_bounds", drug=drug,
@@ -108,7 +102,7 @@ class LiveEvidenceProvider:
         if self._fatal_src is None:
             raise KnowledgeUnavailableError(
                 fact="fatal_error_rules",
-                reason="no fatal-rule source wired (Session B target: ISMP)",
+                reason="no fatal-rule source wired (rules served from vendored artifact)",
             )
         try:
             yield from self._fatal_src.fetch_rules()
@@ -116,4 +110,54 @@ class LiveEvidenceProvider:
             raise KnowledgeUnavailableError(
                 fact="fatal_error_rules",
                 reason=f"source fetch failed: {type(exc).__name__}: {exc}",
+            ) from exc
+
+    # ─── L2-1 ONTOLOGY NORMALIZATION (Session B) ──────────────────────────
+
+    def normalize_drug(self, name: str) -> DrugNormalization | None:
+        if self._norm_conn is None:
+            raise KnowledgeUnavailableError(
+                fact="drug_normalization", drug=name,
+                reason="no drug-normalization connector wired (inject RxNormConnector)",
+            )
+        try:
+            return self._norm_conn.normalize(name)
+        except KnowledgeUnavailableError:
+            raise
+        except Exception as exc:
+            raise KnowledgeUnavailableError(
+                fact="drug_normalization", drug=name,
+                reason=f"connector fetch failed: {type(exc).__name__}: {exc}",
+            ) from exc
+
+    def get_drug_synonyms(self, name: str) -> list[str]:
+        if self._norm_conn is None:
+            raise KnowledgeUnavailableError(
+                fact="drug_synonyms", drug=name,
+                reason="no drug-normalization connector wired",
+            )
+        try:
+            return self._norm_conn.get_synonyms(name)
+        except KnowledgeUnavailableError:
+            raise
+        except Exception as exc:
+            raise KnowledgeUnavailableError(
+                fact="drug_synonyms", drug=name,
+                reason=f"connector fetch failed: {type(exc).__name__}: {exc}",
+            ) from exc
+
+    def get_atc_classification(self, name_or_rxcui: str) -> AtcClassification | None:
+        if self._norm_conn is None:
+            raise KnowledgeUnavailableError(
+                fact="atc_classification", drug=name_or_rxcui,
+                reason="no drug-normalization connector wired",
+            )
+        try:
+            return self._norm_conn.get_atc(name_or_rxcui)
+        except KnowledgeUnavailableError:
+            raise
+        except Exception as exc:
+            raise KnowledgeUnavailableError(
+                fact="atc_classification", drug=name_or_rxcui,
+                reason=f"connector fetch failed: {type(exc).__name__}: {exc}",
             ) from exc

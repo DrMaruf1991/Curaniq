@@ -19,6 +19,7 @@ Boot-time invariants:
 See docs/MIGRATION_PLAYBOOK.md for the procedure to migrate the next
 clinical engine off hardcoded constants onto this provider.
 """
+from curaniq.knowledge.connectors import RxNormConnector
 from curaniq.knowledge.exceptions import (
     KnowledgeError,
     KnowledgeUnavailableError,
@@ -29,7 +30,9 @@ from curaniq.knowledge.live import LiveEvidenceProvider
 from curaniq.knowledge.provider import ClinicalKnowledgeProvider
 from curaniq.knowledge.router import RouterProvider
 from curaniq.knowledge.types import (
+    AtcClassification,
     DoseBounds,
+    DrugNormalization,
     FatalErrorRule,
     Provenance,
     compile_pattern,
@@ -37,8 +40,10 @@ from curaniq.knowledge.types import (
 from curaniq.knowledge.vendored import VendoredSnapshotProvider
 
 __all__ = [
+    "AtcClassification",
     "ClinicalKnowledgeProvider",
     "DoseBounds",
+    "DrugNormalization",
     "FatalErrorRule",
     "KnowledgeError",
     "KnowledgeUnavailableError",
@@ -46,6 +51,7 @@ __all__ = [
     "Provenance",
     "ProvenanceMissingError",
     "RouterProvider",
+    "RxNormConnector",
     "VendoredDataRefusedError",
     "VendoredSnapshotProvider",
     "compile_pattern",

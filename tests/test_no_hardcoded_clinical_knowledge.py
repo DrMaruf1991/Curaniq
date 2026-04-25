@@ -90,9 +90,9 @@ _EXEMPT_NAME_FRAGMENTS: set[str] = {
 # this test — they are a separate migration target captured in Sessions
 # B–G playbook entries.
 _KNOWN_UNMIGRATED: set[str] = {
-    # ─── Session B target — RxNorm + ATC ───
-    "DRUG_NAME_VARIANTS@curaniq/layers/L2_curation/ontology.py",
-    "_DRUG_SYNONYMS@curaniq/layers/L3_safety_kernel/cql_engine.py",
+    # ─── Session B (FIX-34) MIGRATIONS ───
+    # _DRUG_SYNONYMS@curaniq/layers/L3_safety_kernel/cql_engine.py — MIGRATED
+    # DRUG_NAME_VARIANTS@curaniq/layers/L2_curation/ontology.py    — MIGRATED (data moved to JSON)
 
     # ─── Session C target — DailyMed SPL section parser (renal/hepatic/pediatric/DDI) ───
     "RENAL_DOSE_RULES@curaniq/layers/L3_safety_kernel/medication_intelligence.py",

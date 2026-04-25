@@ -24,7 +24,12 @@ from __future__ import annotations
 
 from typing import Iterator, Protocol, runtime_checkable
 
-from curaniq.knowledge.types import DoseBounds, FatalErrorRule
+from curaniq.knowledge.types import (
+    AtcClassification,
+    DoseBounds,
+    DrugNormalization,
+    FatalErrorRule,
+)
 
 
 @runtime_checkable
@@ -76,5 +81,43 @@ class ClinicalKnowledgeProvider(Protocol):
         These are SAFETY LOGIC, not clinical recommendations. They are
         loaded from a versioned config artifact. The provider attaches
         the artifact's provenance to each rule.
+        """
+        ...
+
+    # ─── L2-1 ONTOLOGY NORMALIZATION ───────────────────────────────────────
+
+    def normalize_drug(self, name: str) -> "DrugNormalization | None":
+        """
+        Resolve a free-text drug name to a canonical RxNorm identity.
+
+        Returns None iff RxNorm has no match for this name (caller
+        decides whether absence is an error). Raises
+        `KnowledgeUnavailableError` iff the provider failed to reach
+        RxNorm (network outage, rate-limit, source down).
+        """
+        ...
+
+    def get_drug_synonyms(self, name: str) -> list[str]:
+        """
+        Return all RxNorm-known synonyms for `name` (brand names,
+        salts, INN/USAN/BAN variants).
+
+        Returns empty list iff RxNorm has no match. Raises
+        `KnowledgeUnavailableError` on connector failure.
+        """
+        ...
+
+    # ─── L3-x DRUG-CLASS MEMBERSHIP (ATC) ──────────────────────────────────
+
+    def get_atc_classification(self, name_or_rxcui: str) -> "AtcClassification | None":
+        """
+        Return WHO ATC classification(s) for the drug.
+
+        Used by L3 engines that need drug-class membership ("is this
+        drug an anticoagulant" → `cls.is_in_class("B01")` instead of
+        consulting a hardcoded `_anticoag_drugs` set).
+
+        Returns None if no ATC mapping exists. Raises
+        `KnowledgeUnavailableError` on connector failure.
         """
         ...

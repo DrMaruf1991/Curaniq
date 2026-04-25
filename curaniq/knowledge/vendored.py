@@ -26,7 +26,9 @@ from curaniq.knowledge.exceptions import (
     VendoredDataRefusedError,
 )
 from curaniq.knowledge.types import (
+    AtcClassification,
     DoseBounds,
+    DrugNormalization,
     FatalErrorRule,
     Provenance,
     compile_pattern,
@@ -111,6 +113,7 @@ class VendoredSnapshotProvider:
             )
         self._dose_bounds: dict[str, DoseBounds] = {}
         self._fatal_rules: list[FatalErrorRule] = []
+        self._drug_normalizations: dict[str, DrugNormalization] = {}
         self._loaded = False
 
     # ─── EAGER LOADING ────────────────────────────────────────────────────
@@ -120,10 +123,11 @@ class VendoredSnapshotProvider:
             return
         self._load_dose_bounds()
         self._load_fatal_error_rules()
+        self._load_drug_synonyms()
         self._loaded = True
         logger.info(
-            "VendoredSnapshotProvider loaded: %d dose bounds, %d fatal-error rules",
-            len(self._dose_bounds), len(self._fatal_rules),
+            "VendoredSnapshotProvider loaded: %d dose bounds, %d fatal rules, %d drug synonyms",
+            len(self._dose_bounds), len(self._fatal_rules), len(self._drug_normalizations),
         )
 
     def _load_dose_bounds(self) -> None:
@@ -172,6 +176,50 @@ class VendoredSnapshotProvider:
                 extras=entry.get("extras", {}),
             ))
 
+    def _load_drug_synonyms(self) -> None:
+        """
+        Load drug-synonym snapshot. Indexed two ways for fast lookup:
+            1. lookup by input_name (lowercase, stripped)
+            2. lookup by any synonym (lowercase, stripped) → same record
+        Both lookups return the same DrugNormalization instance.
+        """
+        path = CLINICAL_DIR / "drug_synonyms.json"
+        if not path.exists():
+            logger.info("drug_synonyms.json not present — drug normalization not vendored")
+            return
+        doc = _load_snapshot(path)
+        md = doc["_metadata"]
+        prov = _provenance_from_metadata(
+            md, source=md.get("source", "RXNORM"),
+            source_url=md.get("source_url", "https://rxnav.nlm.nih.gov"),
+        )
+        for entry in doc.get("drugs", []):
+            input_name = entry["input_name"].lower().strip()
+            rxcui = str(entry["rxcui"]).strip()
+            canonical = entry["canonical_name"]
+            tty = entry.get("tty", "IN")
+            # Build synonym set including input_name AND canonical
+            syn_set = set(entry.get("synonyms", []))
+            syn_set.add(canonical)
+            syn_set.add(input_name)
+            try:
+                norm = DrugNormalization(
+                    input_name=input_name,
+                    rxcui=rxcui,
+                    canonical_name=canonical,
+                    tty=tty,
+                    synonyms=tuple(sorted(syn_set)),
+                    provenance=prov,
+                )
+            except ValueError as exc:
+                logger.warning("drug_synonyms.json: skipping invalid entry %r: %s", input_name, exc)
+                continue
+            # Index by input_name and every synonym (lowercase) so that
+            # "Glucophage" → metformin works in vendored fallback.
+            self._drug_normalizations[input_name] = norm
+            for syn in syn_set:
+                self._drug_normalizations.setdefault(syn.lower().strip(), norm)
+
     # ─── PROVIDER PROTOCOL ────────────────────────────────────────────────
 
     def get_dose_bounds(self, drug: str, jurisdiction: str = "US") -> DoseBounds | None:
@@ -181,6 +229,31 @@ class VendoredSnapshotProvider:
     def iter_fatal_error_rules(self) -> Iterator[FatalErrorRule]:
         self._ensure_loaded()
         yield from self._fatal_rules
+
+    # ─── L2-1 ONTOLOGY (Session B) ────────────────────────────────────────
+
+    def normalize_drug(self, name: str) -> DrugNormalization | None:
+        """
+        Resolve free-text name to canonical RxNorm identity from snapshot.
+        Returns None iff the name is not in the vendored set.
+        """
+        self._ensure_loaded()
+        return self._drug_normalizations.get(name.lower().strip())
+
+    def get_drug_synonyms(self, name: str) -> list[str]:
+        """All known synonyms for `name` from snapshot, or empty list."""
+        norm = self.normalize_drug(name)
+        if norm is None:
+            return []
+        return list(norm.synonyms)
+
+    def get_atc_classification(self, name_or_rxcui: str) -> AtcClassification | None:
+        """
+        ATC classification is NOT vendored. ATC requires the live
+        RxClass API. In demo this returns None — caller must use
+        live or accept absence.
+        """
+        return None
 
     # ─── INTROSPECTION ────────────────────────────────────────────────────
 

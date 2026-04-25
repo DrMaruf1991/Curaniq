@@ -1,6 +1,6 @@
 # CURANIQ — Medical Evidence Operating System
 
-**State:** Integration-green. **85/85 tests passing.** Pipeline processes clinical queries end-to-end through the FastAPI surface. Postgres backbone (FIX-31, FIX-32) provides production database for source registry, evidence versioning, and tamper-evident audit ledger with verified concurrency safety. **FIX-33 (Session A) introduces the `curaniq.knowledge` provider abstraction** — clinical knowledge no longer hardcoded inside engines. L5-12 Dose Plausibility migrated end-to-end. Static-check enforcement prevents regression.
+**State:** Integration-green. **106/106 offline tests passing**, 10 live RxNorm tests skip cleanly without network. Pipeline processes clinical queries end-to-end through the FastAPI surface. Postgres backbone (FIX-31, FIX-32) provides production database for source registry, evidence versioning, and tamper-evident audit ledger. **FIX-33/FIX-34 (Sessions A+B) introduce the `curaniq.knowledge` provider abstraction and live RxNorm connector** — clinical knowledge is no longer hardcoded inside engines. L5-12 Dose Plausibility, L2-1 Ontology Normalizer, and L3-1 CQL Engine drug-name resolution are migrated end-to-end. SourceRegistry has 20/20 evidence-source policies. Static-check enforcement prevents regression.
 
 ## Quick start
 
@@ -77,7 +77,10 @@ Set `CURANIQ_ENV` in `.env`:
 | `tests/test_production_enforcement_contract_static.py` | 5 | clinician_prod boot tripwires: seed/mock leakage, source-sync persistence |
 | `tests/test_knowledge_contract.py` | 21 | **FIX-33** — Provenance validation, DoseBounds invariants, vendored fail-closed in prod, RouterProvider env-aware policy, all six architecture-named fatal patterns (mtx/vincristine/heparin/colchicine/insulin/morphine) |
 | `tests/test_no_hardcoded_clinical_knowledge.py` | 3 | **FIX-33** — Static check that fails the build if a new module-level UPPER_CASE clinical container is added outside the explicit allowlist |
-| **Total** | **85** | |
+| `tests/test_session_b_contract.py` | 21 | **FIX-34** — DrugNormalization/AtcClassification invariants, vendored synonym reverse lookup (Glucophage→metformin), RxNormConnector with fixture-based httpx mocks (200/404/5xx/network-error paths), ATC level inference |
+| `tests/test_rxnorm_live.py` | 10 | **FIX-34** — Live RxNorm integration tests; skip by default, run with `CURANIQ_RUN_LIVE=1` against `rxnav.nlm.nih.gov` |
+| **Total offline** | **106** | All passing |
+| **Live (with `CURANIQ_RUN_LIVE=1`)** | **+10** | RxNorm REST validation |
 
 ## Directory layout
 

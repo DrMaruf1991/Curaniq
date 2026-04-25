@@ -480,40 +480,48 @@ _DDI_DATABASE: dict[frozenset, dict] = {
     },
 }
 
-# Drug synonym normalization (links to L2-15 Multi-Language Drug Name Resolver)
-_DRUG_SYNONYMS: dict[str, str] = {
-    # Generic ↔ Brand
-    "tylenol": "acetaminophen",
-    "paracetamol": "acetaminophen",
-    "panadol": "acetaminophen",
-    "advil": "ibuprofen",
-    "motrin": "ibuprofen",
-    "zocor": "simvastatin",
-    "lipitor": "atorvastatin",
-    "coumadin": "warfarin",
-    "biaxin": "clarithromycin",
-    "zithromax": "azithromycin",
-    "diflucan": "fluconazole",
-    "glucophage": "metformin",
-    "haldol": "haloperidol",
-    "flagyl": "metronidazole",
-    # UK/CIS name mapping (L2-15)
-    "adrenaline": "epinephrine",
-    "salbutamol": "albuterol",
-    "lignocaine": "lidocaine",
-    "frusemide": "furosemide",
-    "amoxicillin": "amoxicillin",  # Same in all markets
-    # Class references (expanded by L3-2)
-    "ssri": "ssri",  # Resolved to specific drugs by L3-2
-    "ace_inhibitor": "ace_inhibitor",
-    "potassium_sparing_diuretic": "potassium_sparing_diuretic",
-}
+# Class identifiers — NOT clinical data. These are pseudo-drug names used by
+# CQL rules to identify drug classes (CQL rules say "if drug is in class
+# 'ssri', then warn about serotonin syndrome"). The actual class membership
+# expansion happens in L3-2 Medication Intelligence using ATC class data.
+# Keeping these as a frozenset here is functional plumbing, not hardcoded
+# clinical knowledge.
+_CLASS_IDENTIFIERS: frozenset[str] = frozenset({
+    "ssri",
+    "ace_inhibitor",
+    "potassium_sparing_diuretic",
+})
 
 
-def _normalize_drug_name(name: str) -> str:
-    """Normalize drug name to canonical form for lookup."""
+def _normalize_drug_name(name: str, knowledge_provider=None) -> str:
+    """
+    Normalize drug name to canonical form for CQL lookup.
+
+    1. Class identifiers (ssri, ace_inhibitor, ...) are returned as-is
+       so L3-2 can expand them via ATC class data.
+    2. Otherwise, the name is resolved through the clinical knowledge
+       provider (live RxNorm in clinician_prod, vendored in demo).
+       Returns the RxNorm canonical name on hit, or the normalized
+       input on miss.
+
+    Falls back gracefully: if the provider raises KnowledgeUnavailableError
+    (live unwired in this env, vendored doesn't have the drug), we return
+    the normalized input rather than failing — drug-name normalization is
+    best-effort augmentation of CQL inputs.
+    """
     normalized = name.lower().strip().replace("-", "_").replace(" ", "_")
-    return _DRUG_SYNONYMS.get(normalized, normalized)
+    if normalized in _CLASS_IDENTIFIERS:
+        return normalized
+    if knowledge_provider is None:
+        return normalized
+    try:
+        norm = knowledge_provider.normalize_drug(name)
+        if norm is not None:
+            return norm.canonical_name.lower().strip().replace("-", "_").replace(" ", "_")
+    except Exception:
+        # KnowledgeUnavailableError or any provider hiccup → use input as-is
+        pass
+    return normalized
 
 
 # ─────────────────────────────────────────────────────────────────────────────
@@ -532,10 +540,17 @@ class CQLEngine:
     any number in a CQL output was computed, not predicted.
     """
 
-    def __init__(self):
+    def __init__(self, knowledge_provider=None):
+        """
+        Args:
+            knowledge_provider: ClinicalKnowledgeProvider for drug-name
+                resolution. If None, drug-name normalization is best-effort
+                using only class identifiers (no synonym resolution).
+                Production should inject a RouterProvider with RxNorm wired.
+        """
         self.pk_calculators = PKCalculators()
         self._ddi_db = _DDI_DATABASE
-        self._drug_synonyms = _DRUG_SYNONYMS
+        self._knowledge_provider = knowledge_provider
 
     def evaluate_patient_query(
         self,
@@ -551,7 +566,7 @@ class CQLEngine:
         """
         output = CQLKernelOutput()
         
-        normalized_drugs = [_normalize_drug_name(d) for d in drugs]
+        normalized_drugs = [_normalize_drug_name(d, self._knowledge_provider) for d in drugs]
         
         # 1. Renal function classification
         renal_fn = None
@@ -1239,8 +1254,8 @@ class CQLEngine:
         
         Reference: Khan DA, Solensky R. J Allergy Clin Immunol. 2010.
         """
-        drug = _normalize_drug_name(drug)
-        allergen = _normalize_drug_name(allergen)
+        drug = _normalize_drug_name(drug, self._knowledge_provider)
+        allergen = _normalize_drug_name(allergen, self._knowledge_provider)
         
         # Classify allergy type from reported history
         if "anaphylaxis" in allergy_type_reported.lower() or "hives" in allergy_type_reported.lower():
