@@ -249,11 +249,46 @@ class RxNormConnector:
         # rxcui itself. We want all human-readable name variants.
         synonyms_set: set[str] = {canonical}
         try:
+            # RxNorm /related.json?tty=... rejects 3+ TTYs (verified 2026-04-25
+            # against api v3.1.351: tty=IN+BN -> 200, tty=IN+BN+SY -> 400).
+            # /allrelated.json returns the full related-concept graph; we
+            # walk all conceptGroup entries client-side.
             related_doc = self._get(
-                f"/REST/rxcui/{rxcui}/related.json",
-                params={"tty": "IN+BN+SY"},
+                f"/REST/rxcui/{rxcui}/allrelated.json",
             )
-            related = (related_doc.get("relatedGroup") or {}).get("conceptGroup") or []
+            # /allrelated.json returns data under "allRelatedGroup" (not
+            # "relatedGroup" like /related.json). Try both for forward compat.
+            related = (
+                (related_doc.get("allRelatedGroup") or {}).get("conceptGroup")
+                or (related_doc.get("relatedGroup") or {}).get("conceptGroup")
+                or []
+            )
+
+            # Brand-to-ingredient promotion. RxNorm distinguishes brands
+            # (Glucophage, rxcui 151827) from ingredients (metformin, rxcui
+            # 6809). For clinical safety, ingredient is what matters: DDI
+            # rules, dose bounds, fatal-error patterns are all keyed on
+            # ingredient. If the matched tty is not IN, find the first
+            # IN-typed concept in the related graph and promote rxcui +
+            # canonical to it. Brand name is preserved in the synonym set
+            # so reverse lookup still works.
+            if tty != "IN":
+                for group in related:
+                    if group.get("tty") != "IN":
+                        continue
+                    concepts = group.get("conceptProperties") or []
+                    if not concepts:
+                        continue
+                    ingredient = concepts[0]
+                    ing_rxcui = ingredient.get("rxcui")
+                    ing_name = ingredient.get("name")
+                    if ing_rxcui and ing_name:
+                        synonyms_set.add(canonical)  # preserve brand name
+                        rxcui = str(ing_rxcui)
+                        canonical = ing_name
+                        tty = "IN"
+                    break
+
             for group in related:
                 for concept in group.get("conceptProperties") or []:
                     syn = concept.get("name")
