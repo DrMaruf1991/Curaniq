@@ -105,6 +105,7 @@ from curaniq.layers.L6_security.phi_scrubber import OutputExfiltrationScanner
 from curaniq.safety.safety_gates import SafetyGateSuiteRunner
 from curaniq.truth_core.config import TruthCorePolicy
 from curaniq.db.production import enforce_production_boot
+from curaniq.knowledge import RouterProvider
 
 # ── NEW: L0 Regulatory Foundation ──
 from curaniq.layers.L0_regulatory.qms_risk import (
@@ -527,14 +528,25 @@ class CURANIQPipeline:
         self.mode_router       = ModeRouter()
         self.decomposer        = QuestionDecomposer()
         self.retriever         = HybridRetriever(evidence_store)
+        # FIX-34 (Session B): Construct the ClinicalKnowledgeProvider once
+        # at pipeline boot and inject into all engines that consume clinical
+        # knowledge. This is the SINGLE SOURCE OF TRUTH for drug
+        # normalization, dose bounds, and fatal-error rules. In
+        # clinician_prod the router is live-only; in demo it falls back
+        # to vendored snapshots with full provenance.
+        self.knowledge_provider = RouterProvider()
         self.cql_kernel        = CQLKernel()
         # LLM client from environment. None = mock mode (no API keys).
         _llm = llm_client or MultiLLMClient.from_environment()
         self.generator         = ConstrainedGenerator(_llm)
         self.claim_engine      = ClaimContractEngine()
-        self.safety_suite      = SafetyGateSuiteRunner()
+        self.safety_suite      = SafetyGateSuiteRunner(
+            knowledge_provider=self.knowledge_provider,
+        )
         self.audit_ledger      = AuditLedger()
-        self.ontology          = OntologyNormalizer()
+        self.ontology          = OntologyNormalizer(
+            knowledge_provider=self.knowledge_provider,
+        )
         self.input_normalizer  = UniversalInputNormalizer()
         self.prompt_defense    = PromptDefenseSuite()
         self.phi_scrubber      = PHIScrubber()
@@ -597,7 +609,9 @@ class CURANIQPipeline:
         self.terminology_versions = TerminologyVersionControl()
 
         # ── L4: Extended modules (richer than core/ simplified versions) ──
-        self.extended_cql = ExtendedCQLEngine()
+        self.extended_cql = ExtendedCQLEngine(
+            knowledge_provider=self.knowledge_provider,
+        )
         self.extended_retriever = HybridRetrievalPipeline()
         self.extended_generator = ConstrainedLLMGenerator()
         self.extended_claim_engine = ExtendedClaimContractEngine()

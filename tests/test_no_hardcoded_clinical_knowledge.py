@@ -93,6 +93,16 @@ _KNOWN_UNMIGRATED: set[str] = {
     # ─── Session B (FIX-34) MIGRATIONS ───
     # _DRUG_SYNONYMS@curaniq/layers/L3_safety_kernel/cql_engine.py — MIGRATED
     # DRUG_NAME_VARIANTS@curaniq/layers/L2_curation/ontology.py    — MIGRATED (data moved to JSON)
+    # RXCUI_LOOKUP@curaniq/layers/L2_curation/ontology.py          — MIGRATED (FIX-34b mid-audit)
+
+    # ─── Session H target — LOINC/SNOMED/ICD-10 controlled terminologies ───
+    # These are clinical-condition / lab-test taxonomies; they need their own
+    # connectors (LOINC API, SNOMED CT International, NCI Metathesaurus or
+    # BioPortal). Not migrated in Sessions B-G; flagged here so the static
+    # check fails the build if anyone deletes them without migrating.
+    "LOINC_LOOKUP@curaniq/layers/L2_curation/ontology.py",
+    "SNOMED_LOOKUP@curaniq/layers/L2_curation/ontology.py",
+    "ICD10_LOOKUP@curaniq/layers/L2_curation/ontology.py",
 
     # ─── Session C target — DailyMed SPL section parser (renal/hepatic/pediatric/DDI) ───
     "RENAL_DOSE_RULES@curaniq/layers/L3_safety_kernel/medication_intelligence.py",
@@ -131,6 +141,9 @@ _CLINICAL_NAME_FRAGMENTS = {
     "STATIN", "SSRI", "MAO", "CHEMO", "ONCOL", "HERB", "FOOD_INTER",
     "RENALLY_CLEARED", "SUD_", "HEPATIC_DRUG", "WEIGHT_SIGNAL",
     "BROSELOW", "CROSS_REACTIVITY",
+    # FIX-34 audit additions:
+    "RXCUI", "LOINC", "SNOMED", "ICD10", "ICD_10", "ATC_",
+    "MEDICATION", "PHARMACOL", "PGX_", "CYP",
 }
 
 

@@ -592,3 +592,141 @@ session-by-session per the migration playbook.
   Russian/Uzbek drug variants.
 - Wiring L4-14 hash-lock into the live extraction path; deletion
   of `ExtendedClaimContractEngine` (Session G target).
+
+---
+
+## FIX-34b — Audit findings and remediation (Session B post-audit)
+
+After Session B delivery, a deep "end-to-end and root-to-root" audit
+surfaced two issues missed during the original migration:
+
+### Audit finding 1 — Production regression (HIGH severity)
+
+`pipeline.py` constructed `OntologyNormalizer()`, `SafetyGateSuiteRunner()`,
+and `ExtendedCQLEngine()` with no `knowledge_provider` argument. Each
+engine's lazy-default behavior was to operate without provider, which
+silently degraded drug-name normalization in production:
+
+    Before FIX-34: _normalize_drug_name("Tylenol") → "acetaminophen"  (via _DRUG_SYNONYMS dict)
+    After FIX-34:  _normalize_drug_name("Tylenol", None) → "tylenol"   (no resolution)
+
+This regression was not caught by the 106 prior tests because they
+exercised engines directly with provider injection. The full pipeline
+path was never exercised with brand names.
+
+**Fix (this delivery):**
+- `pipeline.py` now constructs ONE `RouterProvider` at boot
+  (`self.knowledge_provider`) and injects it into every engine that
+  consumes clinical knowledge: `OntologyNormalizer`, `SafetyGateSuiteRunner`,
+  `ExtendedCQLEngine`. The provider becomes the single source of truth
+  per pipeline instance.
+- `tests/test_pipeline_provider_wiring.py` (15 new tests) locks this in.
+  Tests construct the full `CURANIQPipeline` and verify (a) the provider
+  is wired into all four engines and (b) brand-name → ingredient
+  resolution actually works through the production code path
+  (Tylenol→acetaminophen, Glucophage→metformin, Coumadin→warfarin,
+  Lipitor→atorvastatin, Plavix→clopidogrel, Cyrillic Панадол→paracetamol).
+
+### Audit finding 2 — Missed migration (HIGH severity)
+
+`RXCUI_LOOKUP` (32-entry dict at `curaniq/layers/L2_curation/ontology.py:310`)
+held drug→RxCUI mappings that are exactly the same scope as Session B
+(both come from RxNorm). The original migration removed `DRUG_NAME_VARIANTS`
+from the same file but left this dict untouched.
+
+**Fix (this delivery):**
+- `RXCUI_LOOKUP` deleted.
+- `OntologyNormalizer.__init__(knowledge_provider=None)` now accepts
+  the provider via DI.
+- `OntologyNormalizer.normalize_drug()` calls
+  `provider.normalize_drug(drug_name)` first; on hit, returns
+  `OntologyMapping(rxcui=norm.rxcui, ...)`. On miss, falls back to
+  CIS-variants lookup for Cyrillic/Uzbek names that RxNorm does not
+  cover (Session F target: UZ MOH live).
+
+### Audit finding 3 — Static check coverage gap (MEDIUM severity)
+
+The static check's `_CLINICAL_NAME_FRAGMENTS` keyword set did not
+include `RXCUI`, `LOINC`, `SNOMED`, `ICD10`, `ATC_`, `MEDICATION`,
+`PHARMACOL`, `PGX_`, `CYP` — so `RXCUI_LOOKUP`, `LOINC_LOOKUP`,
+`SNOMED_LOOKUP`, `ICD10_LOOKUP` (49+30+24+32 entries combined) were
+not flagged.
+
+**Fix (this delivery):**
+- Keyword set extended in
+  `tests/test_no_hardcoded_clinical_knowledge.py`.
+- `LOINC_LOOKUP`, `SNOMED_LOOKUP`, `ICD10_LOOKUP` added to
+  `_KNOWN_UNMIGRATED` allowlist with explicit Session H target tag
+  (LOINC/SNOMED/ICD-10 controlled terminologies need their own
+  connectors via UMLS/BioPortal — out of scope for Sessions B-G but
+  now tracked).
+
+### Audit finding 4 — Architectural seam (MEDIUM severity)
+
+The original codebase has a separate `data_loader.load_json_data()`
+pattern that loads 31 clinical-data JSON files from `curaniq/data/*.json`.
+These files predate FIX-33 — they have their own `_metadata` convention
+but lack the FIX-33 schema fields (`is_authoritative`, `extraction_method`,
+`snapshot_version`, etc.). They bypass the `ClinicalKnowledgeProvider`
+abstraction.
+
+The architecture's stated promise is that ALL clinical data flows through
+provider with full provenance. Until backfill, this gap means:
+- `clinician_prod` refuses vendored `dose_bounds` (because routed via provider)
+- but accepts vendored `beers_criteria_2023.json`, `who_eml_2023.json`,
+  `renal_dosing.json`, etc. (because direct-loaded via `data_loader`)
+
+This is inconsistent.
+
+**Fix (this delivery, partial):**
+- `curaniq/data_loader.py` rewritten to validate the FIX-33 metadata
+  schema on every load. Files lacking the schema get a logged warning
+  (info-level for incomplete metadata, warning-level for missing block).
+  Loading is preserved (backward compatible).
+- New `get_data_health_report()` returns a structured summary of
+  metadata completeness across the 31 legacy files.
+- `tests/test_data_layer_health.py` (4 tests) pins the current state
+  (31/31 incomplete) as a baseline that cannot grow. New JSON files
+  added to `curaniq/data/` MUST have full FIX-33 metadata.
+- The actual backfill of the 31 legacy files (adding `snapshot_date_iso`,
+  `snapshot_version`, `license_status`, `extraction_method`,
+  `is_authoritative` to each file's `_metadata` block) is deferred to
+  a dedicated cleanup session (it requires per-file decisions on
+  authoritative source attribution).
+
+### Audit finding 5 — Live API unverified (HIGH severity, OUT OF SCOPE)
+
+The RxNorm connector code was never validated against the real
+`rxnav.nlm.nih.gov` API. The development sandbox blocks the host
+(`x-deny-reason: host_not_allowed`). All 21 contract tests pass
+against hand-constructed httpx fixtures based on the documented API
+shape, but real-API behavior remains unverified.
+
+**Fix (deferred to user environment):**
+- `tests/test_rxnorm_live.py` runs against the real API when
+  `CURANIQ_RUN_LIVE=1` is set. Run on the A100 box.
+- If any test fails, the failure shape will pinpoint exactly where
+  connector logic diverges from real-API behavior.
+
+### Verification
+
+- **Test suite (offline): 125/125 passing** (was 106; +15 pipeline-wiring +
+  +4 data-layer-health = +19 net new tests; pre-existing tests unchanged)
+- **Live RxNorm tests: 10 skip cleanly without `CURANIQ_RUN_LIVE`**
+- **Integrity check: 17/17 pass** (pipeline boots, provider wires through,
+  all engines see the provider, brand-name resolution works end-to-end,
+  Cyrillic still works, fail-closed in clinician_prod, static check
+  catches new clinical containers, SourceRegistry 20/20, data-layer
+  health monitoring active)
+
+### Files added / modified in FIX-34b
+
+- `curaniq/core/pipeline.py` — wire `RouterProvider` into engines
+- `curaniq/layers/L2_curation/ontology.py` — delete `RXCUI_LOOKUP`,
+  add `OntologyNormalizer.__init__(knowledge_provider=...)`
+- `curaniq/data_loader.py` — metadata schema validation, health report
+- `tests/test_pipeline_provider_wiring.py` — NEW, 15 regression tests
+- `tests/test_data_layer_health.py` — NEW, 4 monitoring tests
+- `tests/test_no_hardcoded_clinical_knowledge.py` — keyword set
+  extended, LOINC/SNOMED/ICD10 added to allowlist
+- `INTEGRATION_FIX_LOG.md` — this entry

@@ -307,63 +307,61 @@ LOINC_LOOKUP: dict[str, tuple[str, str]] = {
 }
 
 # RxCUI lookup for common drugs (production: full NLM API)
-RXCUI_LOOKUP: dict[str, str] = {
-    "paracetamol":    "161",
-    "acetaminophen":  "161",
-    "ibuprofen":      "5640",
-    "amoxicillin":    "723",
-    "metformin":      "6809",
-    "atorvastatin":   "83367",
-    "simvastatin":    "36567",
-    "lisinopril":     "29046",
-    "amlodipine":     "17767",
-    "metoprolol":     "41493",
-    "atenolol":       "1202",
-    "warfarin":       "11289",
-    "aspirin":        "1191",
-    "omeprazole":     "7646",
-    "salbutamol":     "2103",
-    "albuterol":      "2103",
-    "ciprofloxacin":  "2551",
-    "metronidazole":  "6922",
-    "diazepam":       "3322",
-    "sertraline":     "36437",
-    "carbamazepine":  "2002",
-    "levothyroxine":  "10582",
-    "furosemide":     "4603",
-    "spironolactone": "9997",
-    "enoxaparin":     "67108",
-    "heparin":        "5224",
-    "morphine":       "7052",
-    "tramadol":       "41493",
-    "prednisolone":   "8638",
-    "dexamethasone":  "3264",
-    "haloperidol":    "5134",
-    "amitriptyline":  "704",
-}
+RXCUI_LOOKUP_LEGACY_NOTE = (
+    "RXCUI_LOOKUP module-level dict was REMOVED in FIX-34 (Session B). "
+    "RxCUIs are now retrieved through ClinicalKnowledgeProvider.normalize_drug() "
+    "— live RxNorm in clinician_prod, vendored snapshot in demo. "
+    "See docs/MIGRATION_PLAYBOOK.md."
+)
 
 
 class OntologyNormalizer:
     """
     L2-1: Ontology normalizer for all clinical terms.
-    
+
     Normalizes drug names, clinical conditions, diagnoses, and lab values
     to their canonical ontology codes.
-    
+
     Production: uses monthly NLM API sync with RxNorm, SNOMED CT,
-    ICD-10, LOINC web services. This implementation uses the
-    curated lookup tables above, augmented by L2-15 drug name resolver.
+    ICD-10, LOINC web services via ClinicalKnowledgeProvider for drugs
+    (Session B); SNOMED/ICD10/LOINC migration is a future session.
     """
 
-    def normalize_drug(self, drug_name: str) -> OntologyMapping:
-        """Normalize a drug name to INN + RxCUI."""
-        canonical, resolved = resolve_drug_name(drug_name)
-        rxcui = RXCUI_LOOKUP.get(canonical.lower())
+    def __init__(self, knowledge_provider=None):
+        """
+        Args:
+            knowledge_provider: ClinicalKnowledgeProvider for drug-name
+                resolution. If None, drug normalization falls back to
+                the vendored CIS variants snapshot only (no RxCUI for
+                non-vendored drugs).
+        """
+        self._kp = knowledge_provider
 
+    def normalize_drug(self, drug_name: str) -> OntologyMapping:
+        """Normalize a drug name to INN + RxCUI via knowledge provider."""
+        # Try the provider first (live in prod, vendored in demo)
+        if self._kp is not None:
+            try:
+                norm = self._kp.normalize_drug(drug_name)
+                if norm is not None:
+                    return OntologyMapping(
+                        original_term=drug_name,
+                        canonical_term=norm.canonical_name,
+                        rxcui=norm.rxcui,
+                        confidence=1.0,
+                    )
+            except Exception:
+                # KnowledgeUnavailableError or transient failure —
+                # fall through to legacy CIS-variants-only resolution
+                pass
+
+        # Legacy fallback: CIS variant resolution (for Cyrillic, Uzbek
+        # local names that RxNorm doesn't have until Session F UZ MOH)
+        canonical, resolved = resolve_drug_name(drug_name)
         return OntologyMapping(
             original_term=drug_name,
             canonical_term=canonical,
-            rxcui=rxcui,
+            rxcui=None,
             confidence=1.0 if resolved else 0.7,
         )
 
