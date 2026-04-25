@@ -215,7 +215,7 @@ def test_no_new_hardcoded_clinical_knowledge():
     """
     found: set[str] = set()
     for fp in _all_curaniq_py_files():
-        rel = str(fp.relative_to(REPO_ROOT))
+        rel = str(fp.relative_to(REPO_ROOT)).replace("\\", "/")
         for name, _ in _scan_file_for_violations(fp):
             found.add(f"{name}@{rel}")
 
